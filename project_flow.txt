@@ -1,0 +1,86 @@
+========================================================================
+ STUDYVERSE WEB — PROJECT ARCHITECTURE & AUTHENTICATION FLOW
+========================================================================
+
+This document outlines the directory structure, routing design, and the
+Firebase authentication flows used in the StudyVerse web application.
+
+------------------------------------------------------------------------
+1. TECH STACK & CONFIGURATION
+------------------------------------------------------------------------
+- Core: React 19, Vite, React Router DOM 7
+- Styling: Tailwind CSS 4
+- Backend/Auth: Firebase Web Client SDK
+
+Configuration Files:
+- `.env`: Holds the client-side Firebase API keys.
+  Vite loads these using `import.meta.env.VITE_FIREBASE_...`
+- `.env.example`: A template containing all required environment keys.
+
+------------------------------------------------------------------------
+2. DIRECTORY STRUCTURE & KEY FILES
+------------------------------------------------------------------------
+- `src/main.jsx`
+  The main entry point. Renders the `<AppRouter />`.
+
+- `src/router/index.jsx`
+  Controls all page routing (public pages vs. protected views).
+  Defines a `<ProtectedRoute />` wrapper. Any route inside this wrapper
+  is guarded. Unauthenticated visitors are redirected to `/login`.
+
+- `src/config/firebase.js`
+  Initializes the Firebase Client App with key strings loaded from
+  `.env`. Exports the `auth` instance and initialized OAuth provider 
+  instances:
+  * GoogleAuthProvider
+  * GithubAuthProvider
+  * OAuthProvider (configured for 'apple.com')
+
+- `src/context/AuthContext.jsx`
+  Global React context managing auth states:
+  * `user`: An object containing displayName, email, uid, photoURL.
+  * `isAuthenticated`: Boolean flag.
+  * `loading`: Boolean state verifying active sessions on page reload.
+  * `loginWithProvider(providerName)`: Triggers Firebase popups.
+  * `onAuthStateChanged`: Listener that synchronizes user status and
+    remembers the session on page refresh.
+
+- `src/components/layout/AppLayout.jsx`
+  The dashboard UI shell. Wraps internal application pages. Includes:
+  * `Sidebar`: Responsive navigation links (Explore, Feed, Communities).
+  * `TopHeader`: Search input, notifications dropdown, user avatar.
+
+------------------------------------------------------------------------
+3. DETAILED AUTHENTICATION FLOW (Social Login)
+------------------------------------------------------------------------
+1. Clicking Social Button:
+   In `LoginPage.jsx` or `RegisterPage.jsx`, clicking "Google", "GitHub",
+   or "Apple" triggers `handleSocialLogin(providerName)`.
+
+2. Triggering Firebase SDK:
+   The page calls `loginWithProvider(providerName)` from the context.
+   Firebase runs `signInWithPopup(auth, provider)` corresponding to
+   the chosen provider (Google, GitHub, or Apple).
+
+3. Popup Authentication:
+   A popup window is generated. The user logs in and grants permission.
+
+4. Session Synchronization:
+   Upon successful authentication, `onAuthStateChanged` in `AuthContext`
+   detects the new Firebase User. It dynamically maps Firebase details
+   (like user.photoURL, user.displayName, etc.) onto the StudyVerse
+   user state schema and flags `isAuthenticated` as true.
+
+5. Routing:
+   The user is redirected to `/dashboard`. Protected routes are now 
+   fully unlocked.
+
+------------------------------------------------------------------------
+4. HOW TO RUN
+------------------------------------------------------------------------
+1. Create a `.env` file at the project root matching `.env.example`
+2. Populate the keys from your Firebase console
+3. Execute in the terminal:
+   $ npm install
+   $ npm run dev
+========================================================================
