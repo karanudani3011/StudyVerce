@@ -1,0 +1,264 @@
+========================================================================
+ STUDYVERSE WEB — ADMIN & TUTOR ROLES IMPLEMENTATION GUIDE
+========================================================================
+
+This guide provides a blueprint for expanding the StudyVerse platform (an 
+Instagram-style study platform) to support three core roles:
+  1. STUDENT (Existing core features)
+  2. TUTOR (Course uploads, quiz creation, student tracking, analytics)
+  3. ADMIN (Tutor verification, content moderation, global platform reports)
+
+------------------------------------------------------------------------
+1. ROLE ARCHITECTURE & CAPABILITIES
+------------------------------------------------------------------------
+
+* STUDENT ROLE (Default)
+  - Explore/Feed: Browse educational posts, reels, and notes.
+  - Interactive: Take quizzes attached to posts, ask questions.
+  - Learning: Enroll in and view courses, earn certificates and XP.
+  - Social: Chat with study buddies and tutors, join communities.
+
+* TUTOR ROLE
+  - Course Creation: Create and structure courses, upload video/PDF lectures.
+  - Post & Reels Creation: Upload posts with attached interactive quizzes.
+  - Student Analytics: View enrolled students, track average quiz scores.
+  - Messaging: Directly answer study doubts from students.
+  - Verification Badge: Distinguish verified tutors from general users.
+
+* ADMIN ROLE
+  - Tutor Management: Verify new tutors (approve certificates/credentials).
+  - Moderation Dashboard: Manage reported posts, comments, or spam.
+  - Platform Analytics: View active daily users, overall course enrollments.
+  - System Settings: Configure API configurations, features toggle (e.g. AI Tutor).
+
+------------------------------------------------------------------------
+2. DATABASE SCHEMA UPDATES (Firebase Firestore)
+------------------------------------------------------------------------
+
+To persist roles and manage new platform objects, organize Firestore collections
+as follows:
+
+A. Users Collection (`/users/{uid}`)
+   - `uid`: String
+   - `name`: String
+   - `email`: String
+   - `role`: String ("student", "tutor", "admin")
+   - `isVerified`: Boolean (Tutor verification status)
+   - `institution`: String
+   - `xp`: Number
+
+B. Tutor Applications Collection (`/tutor_applications/{appId}`)
+   - `appId`: String
+   - `userId`: String (reference to /users)
+   - `subject`: String
+   - `credentialsUrl`: String (PDF of degree/certificates)
+   - `status`: String ("pending", "approved", "rejected")
+   - `appliedAt`: Timestamp
+
+C. Courses Collection (`/courses/{courseId}`)
+   - `courseId`: String
+   - `title`: String
+   - `tutorId`: String (reference to /users)
+   - `description`: String
+   - `banner`: String
+   - `lectures`: Array of Objects [{ title: String, videoUrl: String, pdfUrl: String }]
+   - `enrolledStudents`: Array of Strings (User UIDs)
+
+D. Flagged Content Collection (`/reports/{reportId}`)
+   - `reportId`: String
+   - `contentType`: String ("post", "comment", "user")
+   - `contentId`: String (reference to the reported item)
+   - `reportedBy`: String (reference to /users)
+   - `reason`: String
+   - `status`: String ("pending", "resolved")
+   - `createdAt`: Timestamp
+
+------------------------------------------------------------------------
+3. UPDATING AUTHENTICATION FLOW (src/context/AuthContext.jsx)
+------------------------------------------------------------------------
+
+Currently, your auth state loads the user from `MOCK_USER`. You need to fetch 
+the persistent role from Firestore upon user sign-in.
+
+* Blue Print code replacement for the onAuthStateChanged listener:
+
+```javascript
+import { db } from '../config/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    if (firebaseUser) {
+      // 1. Reference the user document in Firestore
+      const userRef = doc(db, 'users', firebaseUser.uid);
+      const userSnap = await getDoc(userRef);
+      
+      let userData = {};
+
+      if (userSnap.exists()) {
+        // 2. Fetch the existing role and profile data
+        userData = userSnap.data();
+      } else {
+        // 3. Register user in Firestore if they sign in for the first time
+        userData = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'New Scholar',
+          email: firebaseUser.email,
+          role: 'student', // Default role
+          avatar: firebaseUser.photoURL || 'https://default-avatar-url.com',
+          xp: 0,
+          joinedDate: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        };
+        await setDoc(userRef, userData);
+      }
+
+      setUser(userData);
+      setIsAuthenticated(true);
+    } else {
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+    setLoading(false);
+  });
+  return () => unsubscribe();
+}, []);
+```
+
+------------------------------------------------------------------------
+4. ROUTE PROTECTION & ACCESS CONTROL (src/router/index.jsx)
+------------------------------------------------------------------------
+
+Create a custom wrapper that restricts routes based on user role permissions:
+
+* Blueprint Code for RoleProtectedRoute component:
+
+```javascript
+import React from 'react';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Spinner } from '../components/ui/index.jsx';
+
+export const RoleProtectedRoute = ({ allowedRoles }) => {
+  const { user, isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Redirect to dashboard if user doesn't possess the required role
+  if (!allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+};
+```
+
+* Applying this wrapper inside `AppRouter` for Admin and Tutor pages:
+
+```javascript
+{/* Tutor-Only Routes */}
+<Route element={<RoleProtectedRoute allowedRoles={['tutor', 'admin']} />}>
+  <Route path="/tutor/dashboard" element={<TutorDashboard />} />
+  <Route path="/tutor/courses/create" element={<CreateCourse />} />
+  <Route path="/tutor/analytics" element={<TutorAnalytics />} />
+</Route>
+
+{/* Admin-Only Routes */}
+<Route element={<RoleProtectedRoute allowedRoles={['admin']} />}>
+  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+  <Route path="/admin/users" element={<AdminUserManagement />} />
+  <Route path="/admin/reports" element={<AdminReports />} />
+  <Route path="/admin/verifications" element={<AdminVerifications />} />
+</Route>
+```
+
+------------------------------------------------------------------------
+5. DYNAMIC NAVIGATION BAR / SIDEBAR DISPLAY
+------------------------------------------------------------------------
+
+In your sidebar component, load specific navigation options dynamically 
+depending on the logged-in user's role:
+
+```javascript
+const getNavigationLinks = (role) => {
+  const commonLinks = [
+    { name: 'Feed', path: '/feed', icon: FeedIcon },
+    { name: 'Explore', path: '/explore', icon: ExploreIcon },
+    { name: 'Communities', path: '/communities', icon: CommunitiesIcon }
+  ];
+
+  switch(role) {
+    case 'admin':
+      return [
+        { name: 'Admin Dashboard', path: '/admin/dashboard', icon: ShieldIcon },
+        { name: 'Verifications', path: '/admin/verifications', icon: CheckIcon },
+        { name: 'Flagged Content', path: '/admin/reports', icon: FlagIcon },
+        ...commonLinks
+      ];
+    case 'tutor':
+      return [
+        { name: 'Tutor Portal', path: '/tutor/dashboard', icon: SchoolIcon },
+        { name: 'My Courses', path: '/tutor/courses/create', icon: AddCourseIcon },
+        { name: 'Student Analytics', path: '/tutor/analytics', icon: ChartIcon },
+        ...commonLinks
+      ];
+    default: // student
+      return [
+        { name: 'Dashboard', path: '/dashboard', icon: DashboardIcon },
+        { name: 'My Learning', path: '/my-learning', icon: BookOpenIcon },
+        { name: 'AI Tutor', path: '/ai-tutor', icon: BotIcon },
+        ...commonLinks
+      ];
+  }
+};
+```
+
+------------------------------------------------------------------------
+6. KEY PAGES TO IMPLEMENT
+------------------------------------------------------------------------
+
+A. TUTOR MODULES:
+   1. **Tutor Portal Dashboard (`/tutor/dashboard`)**:
+      - High-level KPIs: Total enrolled students, total courses, average rating.
+      - Course list: Quick edit and upload options.
+      - Student question inbox: Direct queries from comments or messages.
+   2. **Course Creator (`/tutor/courses/create`)**:
+      - Form to set Title, Description, Subject category, Banner image.
+      - Section builder: Add modules and upload video/PDF resources.
+   3. **Interactive Quiz Generator**:
+      - Create multiple-choice questions (MCQs) to attach to feed posts.
+      - Define correct answers, points (XP), and explanations.
+
+B. ADMIN MODULES:
+   1. **Admin Control Center (`/admin/dashboard`)**:
+      - Metrics: Daily active users, signup rates, report volume.
+      - Server and feature toggles (turn maintenance mode on/off).
+   2. **Verification Portal (`/admin/verifications`)**:
+      - List of pending applications from users wishing to become tutors.
+      - Preview uploaded resumes or academic credentials.
+      - "Verify" button to change user role to 'tutor' and add blue badge.
+   3. **Content Moderation (`/admin/reports`)**:
+      - List of posts reported by students for spam, inaccuracy, or abuse.
+      - Action controls: "Dismiss Report" or "Delete Content" (and notify user).
+
+------------------------------------------------------------------------
+7. STEP-BY-STEP IMPLEMENTATION CHECKLIST
+------------------------------------------------------------------------
+
+[ ] 1. Firestore Schema & Rules: Set up validation checks inside Firestore.
+[ ] 2. Update AuthContext: Retrieve roles from the database upon signup/login.
+[ ] 3. Create RoleProtectedRoute: Protect paths in `src/router/index.jsx`.
+[ ] 4. Build Custom Sidebar Options: Conditionally render links in `Sidebar.jsx`.
+[ ] 5. Implement Tutor Dashboard views (under `src/pages/tutor/`).
+[ ] 6. Implement Admin Moderation & Verification views (under `src/pages/admin/`).
+[ ] 7. Add Tutor application form for regular students to request a Tutor role.
+========================================================================

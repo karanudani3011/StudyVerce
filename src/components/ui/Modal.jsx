@@ -42,10 +42,10 @@ export const Modal = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 15 }}
             transition={{ duration: 0.25 }}
-            className={`relative w-full ${maxWidth} bg-white rounded-[20px] p-6 sm:p-8 shadow-[0_8px_30px_rgba(15,23,42,0.08)] border border-[#E2E8F0] z-10`}
+            className={`relative w-full ${maxWidth} max-h-[85vh] bg-white rounded-[20px] p-6 sm:p-8 shadow-[0_8px_30px_rgba(15,23,42,0.08)] border border-[#E2E8F0] z-10 flex flex-col`}
           >
             {title && (
-              <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#EDF2F7]">
+              <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#EDF2F7] shrink-0">
                 <h3 className="text-lg font-bold text-[#1E293B]">{title}</h3>
                 <button
                   onClick={onClose}
@@ -65,7 +65,9 @@ export const Modal = ({
               </button>
             )}
 
-            <div>{children}</div>
+            <div className="flex-1 overflow-y-auto pr-1 min-h-0 scrollbar-thin">
+              {children}
+            </div>
           </motion.div>
         </div>
       )}

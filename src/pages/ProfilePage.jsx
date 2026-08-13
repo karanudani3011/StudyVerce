@@ -28,7 +28,7 @@ export const ProfilePage = () => {
         <main className="flex-1 p-4 sm:p-8 max-w-5xl mx-auto w-full space-y-8 overflow-y-auto pb-24 md:pb-8">
           {/* Profile Header Card */}
           <div className="bg-white rounded-[20px] border border-[#E2E8F0] shadow-[0_8px_30px_rgba(15,23,42,0.04)] overflow-hidden">
-            <img src={user.coverImage} alt="Cover" className="w-full h-40 sm:h-52 object-cover" />
+            <img src={user.coverImage || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80'} alt="Cover" className="w-full h-40 sm:h-52 object-cover" />
             <div className="p-6 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-5 -mt-12 relative z-10">
               <div className="flex items-end gap-4">
                 <Avatar src={user.avatar} alt={user.name} size="2xl" verified className="ring-4 ring-white" />

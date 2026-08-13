@@ -45,10 +45,15 @@ const SettingsPage      = lazy(() => import('../pages/settings/SettingsPage'));
 const ContactPage       = lazy(() => import('../pages/misc/ContactPage'));
 const FeedbackPage      = lazy(() => import('../pages/misc/FeedbackPage'));
 const AboutPage         = lazy(() => import('../pages/misc/AboutPage'));
+const BlogPage          = lazy(() => import('../pages/misc/BlogPage'));
+// const CareersPage       = lazy(() => import('../pages/misc/CareersPage'));
+// const PressPage         = lazy(() => import('../pages/misc/PressPage'));
 const HelpPage          = lazy(() => import('../pages/misc/HelpPage'));
 const FAQPage           = lazy(() => import('../pages/misc/FAQPage'));
 const PrivacyPage       = lazy(() => import('../pages/misc/PrivacyPage'));
 const TermsPage         = lazy(() => import('../pages/misc/TermsPage'));
+const SecurityPage      = lazy(() => import('../pages/misc/SecurityPage'));
+const CookiesPage       = lazy(() => import('../pages/misc/CookiesPage'));
 const PremiumPage       = lazy(() => import('../pages/premium/PremiumPage'));
 const SubscriptionPage  = lazy(() => import('../pages/premium/SubscriptionPage'));
 const PaymentPage       = lazy(() => import('../pages/premium/PaymentPage'));
@@ -101,12 +106,17 @@ export const AppRouter = () => (
             <Route path="/otp"               element={<OTPVerify />} />
             <Route path="/reset-password"    element={<ResetPassword />} />
             <Route path="/about"             element={<AboutPage />} />
+            <Route path="/blog"              element={<BlogPage />} />
+            {/* <Route path="/careers"           element={<CareersPage />} /> */}
+            {/* <Route path="/press"             element={<PressPage />} /> */}
             <Route path="/contact"           element={<ContactPage />} />
             <Route path="/feedback"          element={<FeedbackPage />} />
             <Route path="/help"              element={<HelpPage />} />
             <Route path="/faq"               element={<FAQPage />} />
             <Route path="/privacy"           element={<PrivacyPage />} />
             <Route path="/terms"             element={<TermsPage />} />
+            <Route path="/security"          element={<SecurityPage />} />
+            <Route path="/cookies"           element={<CookiesPage />} />
             <Route path="/premium"           element={<PremiumPage />} />
             <Route path="/maintenance"       element={<Maintenance />} />
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Award, Flame, Zap, Edit3, Shield, BookOpen, Bookmark } from 'lucide-react';
+import { Award, Flame, Zap, Edit3, Shield, BookOpen, Bookmark, Camera } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Avatar, Badge, Tabs } from '../../components/ui/index.jsx';
 import { Button } from '../../components/ui/Button';
@@ -23,7 +23,23 @@ export default function ProfilePage() {
       <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 pb-24 md:pb-8">
         {/* Cover & Avatar Header */}
         <div className="bg-white rounded-[24px] border border-[#E2E8F0] card-shadow overflow-hidden">
-          <img src={user.coverImage} alt="" className="w-full h-44 object-cover" />
+          {/* Banner — click goes to Edit Profile */}
+          <div
+            className="relative w-full h-44 group cursor-pointer"
+            onClick={() => navigate('/profile/edit')}
+          >
+            <img
+              src={user.coverImage || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=1200'}
+              alt="Profile banner"
+              className="w-full h-full object-cover"
+            />
+            {/* Hover overlay with edit hint */}
+            <div className="absolute inset-0 bg-[#1E293B]/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white">
+              <Camera className="w-6 h-6" />
+              <span className="text-xs font-semibold">Edit Banner</span>
+            </div>
+          </div>
+
           <div className="p-6 relative pt-0">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 mb-4">
               <Avatar src={user.avatar} size="2xl" verified className="ring-4 ring-white" />

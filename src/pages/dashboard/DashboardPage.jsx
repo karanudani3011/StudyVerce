@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Flame, Zap, Clock, Target, TrendingUp, ArrowRight, Sparkles, BookOpen, Trophy, Bot } from 'lucide-react';
@@ -6,6 +6,7 @@ import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Avatar, Badge, Progress } from '../../components/ui/index.jsx';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
+import { apiGet } from '../../config/api';
 import { MOCK_COURSES, MOCK_FEED_POSTS, MOCK_LEADERBOARD, MOCK_TEACHERS } from '../../data/mockData';
 
 const fadeUp = (delay = 0) => ({
@@ -27,16 +28,35 @@ const StatCard = ({ title, value, desc, icon: Icon, iconColor, iconBg, trend }) 
 );
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const navigate = useNavigate();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
+  const [dashStats, setDashStats] = useState(null);
+
+  // Fetch live dashboard stats from backend
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const data = await apiGet('/users/dashboard');
+        if (data.success) {
+          setDashStats(data.stats);
+        }
+      } catch (error) {
+        console.error('Dashboard fetch error:', error.message);
+      }
+    };
+    fetchDashboard();
+  }, []);
+
+  const s = dashStats || user;
+
   const stats = [
-    { title: 'Current Streak', value: `${user.streak} Days`, desc: 'Personal best: 21 days', icon: Flame, iconColor: 'text-[#F59E0B]', iconBg: 'bg-amber-50' },
-    { title: 'Total XP Earned', value: user.xp.toLocaleString(), desc: 'Top 5% globally', icon: Zap, iconColor: 'text-[#4F7DF6]', iconBg: 'bg-[#EEF4FF]' },
-    { title: 'Study Time', value: '32.5 hrs', desc: 'This week', icon: Clock, iconColor: 'text-[#8B5CF6]', iconBg: 'bg-purple-50' },
-    { title: 'Daily Goal', value: `${Math.round((user.currentGoalMinutes / user.dailyGoalMinutes) * 100)}%`, desc: `${user.currentGoalMinutes}/${user.dailyGoalMinutes} mins`, icon: Target, iconColor: 'text-[#22C55E]', iconBg: 'bg-emerald-50' },
+    { title: 'Current Streak', value: `${s.streak} Days`, desc: 'Personal best: 21 days', icon: Flame, iconColor: 'text-[#F59E0B]', iconBg: 'bg-amber-50' },
+    { title: 'Total XP Earned', value: (s.xp || 0).toLocaleString(), desc: 'Top 5% globally', icon: Zap, iconColor: 'text-[#4F7DF6]', iconBg: 'bg-[#EEF4FF]' },
+    { title: 'Study Time', value: s.studyHours || '32.5 hrs', desc: 'This week', icon: Clock, iconColor: 'text-[#8B5CF6]', iconBg: 'bg-purple-50' },
+    { title: 'Daily Goal', value: `${Math.round(((s.currentGoalMinutes || 45) / (s.dailyGoalMinutes || 60)) * 100)}%`, desc: `${s.currentGoalMinutes || 45}/${s.dailyGoalMinutes || 60} mins`, icon: Target, iconColor: 'text-[#22C55E]', iconBg: 'bg-emerald-50' },
   ];
 
   return (

@@ -57,6 +57,23 @@ export const LandingNavbar = () => {
 };
 
 // ─── LANDING FOOTER ───────────────────────────────────────────────────────────
+const FOOTER_LINK_MAP = {
+  'Explore': '/explore',
+  'Feed': '/feed',
+  'Communities': '/communities',
+  'AI Tutor': '/ai-tutor',
+  'Courses': '/courses',
+  'About': '/about',
+  'Blog': '/blog',
+  // 'Careers': '/careers',
+  // 'Press': '/press',
+  'Contact': '/contact',
+  'Privacy Policy': '/privacy',
+  'Terms': '/terms',
+  'Security': '/security',
+  'Cookies': '/cookies',
+};
+
 export const LandingFooter = () => (
   <footer className="bg-white border-t border-[#E2E8F0] py-12">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -72,13 +89,23 @@ export const LandingFooter = () => (
         </div>
         {[
           { title: 'Platform', links: ['Explore', 'Feed', 'Communities', 'AI Tutor', 'Courses'] },
-          { title: 'Company', links: ['About', 'Blog', 'Careers', 'Press', 'Contact'] },
+          { title: 'Company', links: ['About', 'Blog', /* 'Careers', 'Press', */ 'Contact'] },
           { title: 'Legal', links: ['Privacy Policy', 'Terms', 'Security', 'Cookies'] },
         ].map(col => (
           <div key={col.title}>
             <h4 className="text-xs font-bold text-[#1E293B] uppercase tracking-wider mb-3">{col.title}</h4>
             <ul className="space-y-2">
-              {col.links.map(l => <li key={l}><a href="#" className="text-sm text-[#64748B] hover:text-[#4F7DF6] transition-colors">{l}</a></li>)}
+              {col.links.map(l => (
+                <li key={l}>
+                  <Link 
+                    to={FOOTER_LINK_MAP[l] || '#'} 
+                    onClick={() => window.scrollTo(0, 0)}
+                    className="text-sm text-[#64748B] hover:text-[#4F7DF6] transition-colors"
+                  >
+                    {l}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
         ))}

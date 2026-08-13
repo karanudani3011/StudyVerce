@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
 export default function RegisterPage() {
-  const { login, loginWithProvider } = useAuth();
+  const { register, loginWithProvider } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
@@ -51,10 +51,20 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    login({ name: form.fullName, email: form.email });
-    addToast('Account created successfully! Welcome to StudyVerse 🎉', 'success');
-    navigate('/dashboard');
+    try {
+      await register({
+        name: form.fullName,
+        email: form.email,
+        password: form.password,
+      });
+      addToast('Account created successfully! Welcome to StudyVerse 🎉', 'success');
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Registration failed. Please try again.');
+      addToast(err.message || 'Registration failed.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSocialLogin = async (provider) => {
@@ -157,7 +167,7 @@ export default function RegisterPage() {
             </label>
           </div>
 
-          {error && !form.confirmPassword && (
+          {error && (
             <p className="text-xs text-[#EF4444] font-medium">{error}</p>
           )}
 

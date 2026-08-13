@@ -5,9 +5,20 @@ import {
   onAuthStateChanged 
 } from 'firebase/auth';
 import { auth, googleProvider, githubProvider, appleProvider } from '../config/firebase';
-import { MOCK_USER } from '../data/mockData';
+import { apiPost, apiGet, apiPut } from '../config/api';
 
 const AuthContext = createContext(null);
+
+// Default fallback stats for fresh users
+const DEFAULT_USER_STATS = {
+  xp: 1250,
+  streak: 5,
+  dailyGoalMinutes: 60,
+  currentGoalMinutes: 45,
+  level: 'Intermediate',
+  followers: 0,
+  following: 0,
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -16,75 +27,125 @@ export const AuthProvider = ({ children }) => {
   const [notificationsCount, setNotificationsCount] = useState(4);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Synchronize with Firebase Auth State
+  // ─── Load user from stored JWT on app boot ──────────────────────────────────
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      if (firebaseUser) {
-        setUser({
-          ...MOCK_USER,
-          id: firebaseUser.uid,
-          name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-          username: `@${(firebaseUser.displayName || firebaseUser.email.split('@')[0]).toLowerCase().replace(/\s+/g, '')}`,
-          email: firebaseUser.email,
-          avatar: firebaseUser.photoURL || MOCK_USER.avatar,
-        });
-        setIsAuthenticated(true);
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
+    const loadUser = async () => {
+      const token = localStorage.getItem('sv_token');
+      if (token) {
+        try {
+          const data = await apiGet('/auth/me');
+          if (data.success && data.user) {
+            setUser({ ...DEFAULT_USER_STATS, ...data.user });
+            setIsAuthenticated(true);
+          }
+        } catch (error) {
+          console.error('Token validation failed:', error.message);
+          localStorage.removeItem('sv_token');
+        }
       }
       setLoading(false);
-    });
-    return () => unsubscribe();
+    };
+    loadUser();
   }, []);
 
-  const loginWithProvider = useCallback(async (providerName) => {
-    try {
-      let provider;
-      if (providerName === 'Google') {
-        provider = googleProvider;
-      } else if (providerName === 'GitHub') {
-        provider = githubProvider;
-      } else if (providerName === 'Apple') {
-        provider = appleProvider;
-      } else {
-        throw new Error(`Unsupported auth provider: ${providerName}`);
-      }
-
-      const result = await signInWithPopup(auth, provider);
-      return result.user;
-    } catch (error) {
-      console.error(`${providerName} Sign-In Error:`, error);
-      throw error;
+  // ─── Register with email/password ───────────────────────────────────────────
+  const register = useCallback(async ({ name, email, password }) => {
+    const data = await apiPost('/auth/register', { name, email, password });
+    if (data.success) {
+      localStorage.setItem('sv_token', data.token);
+      setUser({ ...DEFAULT_USER_STATS, ...data.user });
+      setIsAuthenticated(true);
+      return data.user;
     }
+    throw new Error(data.message || 'Registration failed');
   }, []);
 
-  const login = useCallback((data = {}) => {
-    setUser(prev => ({ ...MOCK_USER, ...prev, ...data }));
-    setIsAuthenticated(true);
+  // ─── Login with email/password ──────────────────────────────────────────────
+  const login = useCallback(async ({ email, password }) => {
+    const data = await apiPost('/auth/login', { email, password });
+    if (data.success) {
+      localStorage.setItem('sv_token', data.token);
+      setUser({ ...DEFAULT_USER_STATS, ...data.user });
+      setIsAuthenticated(true);
+      return data.user;
+    }
+    throw new Error(data.message || 'Login failed');
   }, []);
 
+  // ─── Login / Register with Social Provider (Google, GitHub, Apple) ─────────
+  const loginWithProvider = useCallback(async (providerName) => {
+    let provider;
+    if (providerName === 'Google') provider = googleProvider;
+    else if (providerName === 'GitHub') provider = githubProvider;
+    else if (providerName === 'Apple') provider = appleProvider;
+    else throw new Error(`Unsupported auth provider: ${providerName}`);
+
+    const result = await signInWithPopup(auth, provider);
+    const firebaseUser = result.user;
+
+    // Sync with backend
+    const data = await apiPost('/auth/google', {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email,
+      name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+      photoURL: firebaseUser.photoURL,
+    });
+
+    if (data.success) {
+      localStorage.setItem('sv_token', data.token);
+      setUser({ ...DEFAULT_USER_STATS, ...data.user });
+      setIsAuthenticated(true);
+      return data.user;
+    }
+    throw new Error('Social auth sync failed');
+  }, []);
+
+  // ─── Logout ─────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     try {
       await signOut(auth);
     } catch (error) {
-      console.error('Logout Error:', error);
+      console.error('Firebase signOut Error:', error);
     }
+    localStorage.removeItem('sv_token');
     setUser(null);
     setIsAuthenticated(false);
   }, []);
 
+  // ─── Add XP helper ──────────────────────────────────────────────────────────
   const addXP = useCallback((amount) => {
     setUser(prev => prev ? ({ ...prev, xp: prev.xp + amount }) : null);
+  }, []);
+
+  // ─── Update User Profile ────────────────────────────────────────────────────
+  const updateUserProfile = useCallback(async (profileData) => {
+    const data = await apiPut('/users/profile', profileData);
+    if (data.success && data.user) {
+      setUser(prev => ({ ...prev, ...data.user }));
+      return data.user;
+    }
+    throw new Error(data.message || 'Failed to update profile');
+  }, []);
+
+  // ─── Toggle Course Wishlist ─────────────────────────────────────────────────
+  const toggleCourseWishlist = useCallback(async (courseId) => {
+    const data = await apiPost('/users/wishlist', { courseId });
+    if (data.success && data.wishlistedCourses) {
+      setUser(prev => prev ? ({ ...prev, wishlistedCourses: data.wishlistedCourses }) : null);
+      return data.wishlistedCourses;
+    }
+    throw new Error(data.message || 'Failed to toggle wishlist');
   }, []);
 
   return (
     <AuthContext.Provider value={{
       user, setUser,
-      isAuthenticated, login, logout, loginWithProvider,
+      isAuthenticated, login, register, logout, loginWithProvider,
       notificationsCount, setNotificationsCount,
       searchQuery, setSearchQuery,
       addXP,
+      updateUserProfile,
+      toggleCourseWishlist,
       loading
     }}>
       {!loading && children}
@@ -97,4 +158,3 @@ export const useAuth = () => {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 };
-

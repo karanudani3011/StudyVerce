@@ -1,15 +1,37 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, CheckCircle2, Clock, BookOpen, Star, ArrowLeft } from 'lucide-react';
+import { Play, CheckCircle2, Clock, BookOpen, Star, ArrowLeft, Heart } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Badge, Avatar, Progress } from '../../components/ui/index.jsx';
 import { Button } from '../../components/ui/Button';
 import { MOCK_COURSES } from '../../data/mockData';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 
 export default function CourseDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, toggleCourseWishlist } = useAuth();
+  const { addToast } = useToast();
+  
   const course = MOCK_COURSES.find(c => c.id === id) || MOCK_COURSES[0];
+
+  const isWishlisted = (courseId) => {
+    return user?.wishlistedCourses?.includes(courseId);
+  };
+
+  const handleWishlistToggle = async (courseId) => {
+    try {
+      const updatedWishlist = await toggleCourseWishlist(courseId);
+      const isNowWishlisted = updatedWishlist.includes(courseId);
+      addToast(
+        isNowWishlisted ? 'Added to wishlist! ❤️' : 'Removed from wishlist!',
+        'success'
+      );
+    } catch (err) {
+      addToast('Failed to update wishlist', 'error');
+    }
+  };
 
   const syllabus = [
     { title: 'Module 1: Foundations & Prerequisites', duration: '2 hrs', completed: true },
@@ -68,7 +90,19 @@ export default function CourseDetails() {
                 <p className="text-xs font-bold text-[#64748B]">Your Course Progress</p>
                 <Progress value={course.progress} showLabel size="md" />
               </div>
-              <Button variant="primary" size="lg" fullWidth icon={Play}>Continue Learning</Button>
+              <div className="flex gap-2.5">
+                <Button variant="primary" size="lg" className="flex-1" icon={Play}>Continue Learning</Button>
+                <button
+                  onClick={() => handleWishlistToggle(course.id)}
+                  className={`p-3 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
+                    isWishlisted(course.id)
+                      ? 'bg-rose-50 border-rose-200 text-rose-500 hover:bg-rose-100/70'
+                      : 'bg-white border-[#E2E8F0] text-[#64748B] hover:text-[#1E293B] hover:bg-[#F5F7FB]'
+                  }`}
+                >
+                  <Heart className={`w-5 h-5 ${isWishlisted(course.id) ? 'fill-rose-500 text-rose-500' : ''}`} strokeWidth={2} />
+                </button>
+              </div>
             </Card>
           </div>
         </div>

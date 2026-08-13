@@ -185,14 +185,16 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-lg' 
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-[#1E293B]/25 backdrop-blur-sm" />
           <motion.div initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 12 }} transition={{ duration: 0.2 }}
-            className={`relative w-full ${maxWidth} bg-white rounded-[20px] p-6 card-shadow border border-[#E2E8F0] z-10`}>
+            className={`relative w-full ${maxWidth} max-h-[85vh] bg-white rounded-[20px] p-6 card-shadow border border-[#E2E8F0] z-10 flex flex-col`}>
             {title && (
-              <div className="flex items-center justify-between mb-5 pb-4 border-b border-[#EDF2F7]">
+              <div className="flex items-center justify-between mb-5 pb-4 border-b border-[#EDF2F7] shrink-0">
                 <h3 className="text-lg font-bold text-[#1E293B]">{title}</h3>
                 <button onClick={onClose} className="p-1.5 text-[#94A3B8] hover:text-[#1E293B] rounded-full hover:bg-[#F5F7FB]"><X className="w-5 h-5" strokeWidth={2} /></button>
               </div>
             )}
-            {children}
+            <div className="flex-1 overflow-y-auto pr-1 min-h-0 scrollbar-thin">
+              {children}
+            </div>
           </motion.div>
         </div>
       )}

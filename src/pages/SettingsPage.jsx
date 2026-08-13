@@ -9,17 +9,25 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 
 export const SettingsPage = () => {
-  const { user, setUser } = useAuth();
+  const { user, setUser, updateUserProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [name, setName] = useState(user.name);
   const [bio, setBio] = useState(user.bio);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (setUser) setUser(prev => ({ ...prev, name, bio }));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaving(true);
+    try {
+      await updateUserProfile({ name, bio });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error('Error saving settings profile:', error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const settingsNav = [
@@ -85,7 +93,7 @@ export const SettingsPage = () => {
                           <CheckCircle2 className="w-4 h-4" strokeWidth={2} /> Saved
                         </span>
                       )}
-                      <Button type="submit" variant="primary" className="ml-auto">Save Changes</Button>
+                      <Button type="submit" variant="primary" className="ml-auto" disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
                     </div>
                   </form>
                 </Card>

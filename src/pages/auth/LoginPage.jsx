@@ -29,10 +29,15 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
-    login({ email });
-    addToast('Welcome back to StudyVerse! 👋', 'success');
-    navigate('/dashboard');
+    try {
+      await login({ email, password });
+      addToast('Welcome back to StudyVerse! 👋', 'success');
+      navigate('/dashboard');
+    } catch (error) {
+      addToast(error.message || 'Login failed. Please check your credentials.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSocialLogin = async (provider) => {
