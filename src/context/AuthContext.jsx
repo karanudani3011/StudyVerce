@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [notificationsCount, setNotificationsCount] = useState(4);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('login');
 
   // ─── Load user from stored JWT on app boot ──────────────────────────────────
   useEffect(() => {
@@ -100,6 +101,20 @@ export const AuthProvider = ({ children }) => {
     throw new Error('Social auth sync failed');
   }, []);
 
+  // ─── Forgot Password — sends OTP email ─────────────────────────────────────
+  const forgotPassword = useCallback(async (email) => {
+    const data = await apiPost('/auth/forgot-password', { email });
+    if (data.success) return data;
+    throw new Error(data.message || 'Failed to send reset email');
+  }, []);
+
+  // ─── Reset Password — verifies OTP & sets new password ─────────────────────
+  const resetPassword = useCallback(async (email, otp, newPassword) => {
+    const data = await apiPost('/auth/reset-password', { email, otp, newPassword });
+    if (data.success) return data;
+    throw new Error(data.message || 'Failed to reset password');
+  }, []);
+
   // ─── Logout ─────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     try {
@@ -146,6 +161,9 @@ export const AuthProvider = ({ children }) => {
       addXP,
       updateUserProfile,
       toggleCourseWishlist,
+      forgotPassword,
+      resetPassword,
+      activeTab, setActiveTab,
       loading
     }}>
       {!loading && children}

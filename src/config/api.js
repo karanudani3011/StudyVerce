@@ -55,4 +55,6 @@ export const apiUpload = (endpoint, formData) =>
     body: formData,
   });
 
+export const apiDelete = (endpoint) => api(endpoint, { method: 'DELETE' });
+
 export default api;

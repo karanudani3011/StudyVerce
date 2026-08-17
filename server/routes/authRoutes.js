@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser, googleAuthSync, getMe } from '../controllers/authController.js';
+import { registerUser, loginUser, googleAuthSync, getMe, forgotPassword, resetPassword } from '../controllers/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -15,5 +15,11 @@ router.post('/google', googleAuthSync);
 
 // GET /api/auth/me  (Protected)
 router.get('/me', protect, getMe);
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', forgotPassword);
+
+// POST /api/auth/reset-password
+router.post('/reset-password', resetPassword);
 
 export default router;

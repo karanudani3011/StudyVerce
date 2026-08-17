@@ -84,3 +84,9 @@ Configuration Files:
    $ npm install
    $ npm run dev
 ========================================================================
+
+StudyVerse AI Tutor Free Api Key From Google Ai Studio 
+
+
+Model : Gemini-2.5-Flash  
+========================================================================

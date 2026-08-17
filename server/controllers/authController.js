@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
+import sendPasswordResetEmail from '../utils/sendEmail.js';
 
 // Helper to generate JWT Token
 const generateToken = (id) => {
@@ -194,5 +196,103 @@ export const getMe = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: error.message || 'Server error fetching user profile.' });
+  }
+};
+
+// @desc    Request password reset — generates & emails a 6-digit OTP
+// @route   POST /api/auth/forgot-password
+// @access  Public
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Please provide your email address.' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    // Always return success to prevent email enumeration attacks
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        message: 'If this email exists, a reset code has been sent.',
+      });
+    }
+
+    // Generate a 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hash and store OTP with 10-minute expiry
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    user.passwordResetOtp = hashedOtp;
+    user.passwordResetOtpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min from now
+    await user.save({ validateBeforeSave: false });
+
+    // Send branded OTP email
+    await sendPasswordResetEmail(user.email, otp, user.name);
+
+    return res.status(200).json({
+      success: true,
+      message: 'A 6-digit reset code has been sent to your email.',
+    });
+  } catch (error) {
+    console.error('Forgot Password Error:', error);
+    return res.status(500).json({ message: error.message || 'Server error sending reset email.' });
+  }
+};
+
+// @desc    Verify OTP and reset password
+// @route   POST /api/auth/reset-password
+// @access  Public
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: 'Email, OTP, and new password are required.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+    }
+
+    // Fetch user WITH the protected OTP fields
+    const user = await User.findOne({ email: email.toLowerCase() })
+      .select('+passwordResetOtp +passwordResetOtpExpiry');
+
+    if (!user || !user.passwordResetOtp || !user.passwordResetOtpExpiry) {
+      return res.status(400).json({ message: 'No active reset code found. Please request a new one.' });
+    }
+
+    // Check expiry
+    if (user.passwordResetOtpExpiry < new Date()) {
+      user.passwordResetOtp = null;
+      user.passwordResetOtpExpiry = null;
+      await user.save({ validateBeforeSave: false });
+      return res.status(400).json({ message: 'Reset code has expired. Please request a new one.' });
+    }
+
+    // Verify OTP
+    const isOtpValid = await bcrypt.compare(otp, user.passwordResetOtp);
+    if (!isOtpValid) {
+      return res.status(400).json({ message: 'Invalid reset code. Please check and try again.' });
+    }
+
+    // Set new password (pre-save hook will hash it)
+    user.password = newPassword;
+    user.passwordResetOtp = null;
+    user.passwordResetOtpExpiry = null;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password reset successful! You can now log in with your new password.',
+    });
+  } catch (error) {
+    console.error('Reset Password Error:', error);
+    return res.status(500).json({ message: error.message || 'Server error resetting password.' });
   }
 };

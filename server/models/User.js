@@ -81,7 +81,17 @@ const userSchema = new mongoose.Schema(
     wishlistedCourses: {
       type: [String],
       default: [],
-    }
+    },
+    passwordResetOtp: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    passwordResetOtpExpiry: {
+      type: Date,
+      default: null,
+      select: false,
+    },
   },
   {
     timestamps: true,
