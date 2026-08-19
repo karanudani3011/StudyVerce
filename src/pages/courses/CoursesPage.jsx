@@ -1,17 +1,122 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Star, Clock, Users, Heart } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  BookOpen, Star, Clock, Users, Heart, Search,
+  ChevronDown, Check, SlidersHorizontal, X, RotateCcw, Award
+} from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
-import { Card, Badge, Avatar } from '../../components/ui/index.jsx';
+import { Card, Badge } from '../../components/ui/index.jsx';
 import { MOCK_COURSES } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+
+// Custom Dropdown select component
+function CustomDropdown({ label, options, selectedValue, onChange, disabled, icon: Icon, placeholder }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const getDisplayLabel = () => {
+    if (selectedValue === 'All') {
+      if (label === 'Category') return 'All Categories';
+      if (label === 'Subcategory') return 'All Subcategories';
+      return `All ${label}s`;
+    }
+    const option = options.find(opt => (typeof opt === 'string' ? opt === selectedValue : opt.id === selectedValue));
+    if (!option) return placeholder || `Select ${label}`;
+    return typeof option === 'string' ? option : option.title || option.name;
+  };
+
+  return (
+    <div className="relative flex-1 min-w-[200px]" ref={dropdownRef}>
+      <label className="block text-[10px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5 ml-1">
+        {label}
+      </label>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between bg-white/80 backdrop-blur-xs border rounded-xl px-4 py-2.5 text-xs font-bold transition-all select-none text-left cursor-pointer ${
+          disabled
+            ? 'opacity-40 cursor-not-allowed border-[#E2E8F0] bg-[#F1F5F9]'
+            : isOpen
+            ? 'border-[#4F7DF6] ring-2 ring-[#4F7DF6]/15 shadow-xs text-[#1E293B]'
+            : 'border-[#E2E8F0] hover:border-[#CBD5E1] text-[#64748B] hover:text-[#1E293B]'
+        }`}
+      >
+        <div className="flex items-center gap-2 truncate">
+          {Icon && <Icon className={`w-3.5 h-3.5 ${disabled ? 'text-[#94A3B8]' : 'text-[#4F7DF6]'}`} />}
+          <span className="truncate">{getDisplayLabel()}</span>
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 ml-2 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180 text-[#4F7DF6]' : 'text-[#94A3B8]'}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && !disabled && (
+          <motion.div
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 4, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="absolute left-0 right-0 z-40 bg-white/95 backdrop-blur-md rounded-xl border border-[#E2E8F0] shadow-lg max-h-60 overflow-y-auto overflow-x-hidden p-1.5 divide-y divide-[#F1F5F9] no-scrollbar scrollbar-thin"
+          >
+            {options.map((opt, i) => {
+              const val = typeof opt === 'string' ? opt : opt.id;
+              const display = typeof opt === 'string' ? opt : opt.title || opt.name;
+              const isSelected = selectedValue === val;
+              const displayLabel = display === 'All'
+                ? (label === 'Category' ? 'All Categories' : label === 'Subcategory' ? 'All Subcategories' : `All ${label}s`)
+                : display;
+
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    onChange(val);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between text-left px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-[#EEF4FF] text-[#4F7DF6]'
+                      : 'hover:bg-[#F5F7FB] text-[#64748B] hover:text-[#1E293B]'
+                  }`}
+                >
+                  <span className="truncate">{displayLabel}</span>
+                  {isSelected && <Check className="w-3.5 h-3.5 text-[#4F7DF6] shrink-0" strokeWidth={2.5} />}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function CoursesPage() {
   const navigate = useNavigate();
   const { user, toggleCourseWishlist } = useAuth();
   const { addToast } = useToast();
   const [activeSubTab, setActiveSubTab] = useState('all');
+
+  // Search & Filter State
+  const [searchVal, setSearchVal] = useState('');
+  const [categoryVal, setCategoryVal] = useState('All');
+  const [subcategoryVal, setSubcategoryVal] = useState('All');
+  const [courseVal, setCourseVal] = useState('All');
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [isAnimatedOpen, setIsAnimatedOpen] = useState(false);
 
   const isWishlisted = (courseId) => {
     return user?.wishlistedCourses?.includes(courseId);
@@ -30,9 +135,55 @@ export default function CoursesPage() {
     }
   };
 
-  const filteredCourses = activeSubTab === 'all' 
-    ? MOCK_COURSES 
+  // Handle clearing all filters
+  const handleClearAll = () => {
+    setSearchVal('');
+    setCategoryVal('All');
+    setSubcategoryVal('All');
+    setCourseVal('All');
+  };
+
+  // Extract Dropdown Options
+  const categoryOptions = ['All', 'Science', 'Technology & CS'];
+
+  const subcategoryOptions = categoryVal === 'All'
+    ? []
+    : ['All', ...new Set(MOCK_COURSES.filter(c => c.category === categoryVal).map(c => c.subcategory).filter(Boolean))];
+
+  const courseOptions = subcategoryVal === 'All' || categoryVal === 'All'
+    ? []
+    : ['All', ...MOCK_COURSES.filter(c => c.category === categoryVal && c.subcategory === subcategoryVal)];
+
+  // Apply filters
+  let filteredCourses = activeSubTab === 'all'
+    ? MOCK_COURSES
     : MOCK_COURSES.filter(c => isWishlisted(c.id));
+
+  // 1. Search Query filter
+  if (searchVal.trim() !== '') {
+    const query = searchVal.toLowerCase();
+    filteredCourses = filteredCourses.filter(c =>
+      c.title.toLowerCase().includes(query) ||
+      c.instructor.toLowerCase().includes(query) ||
+      c.tags.some(tag => tag.toLowerCase().includes(query)) ||
+      (c.subject && c.subject.toLowerCase().includes(query))
+    );
+  }
+
+  // 2. Category filter
+  if (categoryVal !== 'All') {
+    filteredCourses = filteredCourses.filter(c => c.category === categoryVal);
+  }
+
+  // 3. Subcategory filter
+  if (subcategoryVal !== 'All') {
+    filteredCourses = filteredCourses.filter(c => c.subcategory === subcategoryVal);
+  }
+
+  // 4. Specific Course filter
+  if (courseVal !== 'All') {
+    filteredCourses = filteredCourses.filter(c => c.id === courseVal);
+  }
 
   const wishlistCount = user?.wishlistedCourses?.length || 0;
 
@@ -51,7 +202,7 @@ export default function CoursesPage() {
               onClick={() => setActiveSubTab('all')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeSubTab === 'all'
-                  ? 'bg-white text-[#4F7DF6] shadow-sm'
+                  ? 'bg-white text-[#4F7DF6] shadow-xs'
                   : 'text-[#64748B] hover:text-[#1E293B]'
               }`}
             >
@@ -61,14 +212,14 @@ export default function CoursesPage() {
               onClick={() => setActiveSubTab('wishlist')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeSubTab === 'wishlist'
-                  ? 'bg-white text-rose-500 shadow-sm'
+                  ? 'bg-white text-rose-500 shadow-xs'
                   : 'text-[#64748B] hover:text-[#1E293B]'
               }`}
             >
               My Wishlist
               {wishlistCount > 0 && (
                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                  activeSubTab === 'wishlist' ? 'bg-rose-500 text-white' : 'bg-[#E2E8F0] text-[#64748B]'
+                  activeSubTab === 'wishlist' ? 'bg-rose-50 text-white' : 'bg-[#E2E8F0] text-[#64748B]'
                 }`}>
                   {wishlistCount}
                 </span>
@@ -77,20 +228,179 @@ export default function CoursesPage() {
           </div>
         </div>
 
+        {/* Search & Filter Bar */}
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94A3B8]" />
+              <input
+                type="text"
+                placeholder="Search courses, instructors, tags..."
+                value={searchVal}
+                onChange={e => setSearchVal(e.target.value)}
+                className="w-full bg-white/80 backdrop-blur-xs border border-[#E2E8F0] focus:border-[#4F7DF6] focus:bg-white pl-10 pr-10 py-2.5 rounded-xl text-sm text-[#1E293B] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#4F7DF6]/15 transition-all shadow-xs"
+              />
+              {searchVal && (
+                <button
+                  onClick={() => setSearchVal('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 text-[#94A3B8] hover:text-[#1E293B] rounded-full hover:bg-[#F5F7FB] cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                if (isFilterPanelOpen) {
+                  setIsAnimatedOpen(false);
+                }
+                setIsFilterPanelOpen(!isFilterPanelOpen);
+              }}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none ${
+                isFilterPanelOpen || categoryVal !== 'All' || subcategoryVal !== 'All' || courseVal !== 'All'
+                  ? 'bg-[#EEF4FF] border-[#4F7DF6]/30 text-[#4F7DF6]'
+                  : 'bg-white border-[#E2E8F0] text-[#64748B] hover:text-[#1E293B] hover:border-[#CBD5E1]'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Filters</span>
+              {(categoryVal !== 'All' || subcategoryVal !== 'All' || courseVal !== 'All') && (
+                <span className="w-2 h-2 rounded-full bg-[#4F7DF6]" />
+              )}
+            </button>
+          </div>
+
+          {/* Collapsible Dropdown Filter Panel */}
+          <AnimatePresence>
+            {isFilterPanelOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                onAnimationComplete={() => {
+                  if (isFilterPanelOpen) {
+                    setIsAnimatedOpen(true);
+                  }
+                }}
+                className={isAnimatedOpen ? "overflow-visible" : "overflow-hidden"}
+              >
+                <div className="bg-[#F8FAFC]/50 border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row gap-4 mt-1 items-end">
+                  <CustomDropdown
+                    label="Category"
+                    options={categoryOptions}
+                    selectedValue={categoryVal}
+                    onChange={(val) => {
+                      setCategoryVal(val);
+                      setSubcategoryVal('All');
+                      setCourseVal('All');
+                    }}
+                    icon={BookOpen}
+                  />
+
+                  <CustomDropdown
+                    label="Subcategory"
+                    options={subcategoryOptions}
+                    selectedValue={subcategoryVal}
+                    onChange={(val) => {
+                      setSubcategoryVal(val);
+                      setCourseVal('All');
+                    }}
+                    disabled={categoryVal === 'All'}
+                    icon={SlidersHorizontal}
+                  />
+
+                  <CustomDropdown
+                    label="Course"
+                    options={courseOptions}
+                    selectedValue={courseVal}
+                    onChange={setCourseVal}
+                    disabled={subcategoryVal === 'All' || categoryVal === 'All'}
+                    icon={Award}
+                  />
+
+                  {(categoryVal !== 'All' || subcategoryVal !== 'All' || courseVal !== 'All' || searchVal !== '') && (
+                    <button
+                      onClick={handleClearAll}
+                      className="px-4 py-2.5 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-xl transition-all cursor-pointer shrink-0 border border-transparent hover:border-rose-100 flex items-center justify-center gap-1.5 h-[38px] mb-[1px]"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Reset Filters
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Active Filter Badges */}
+          {(categoryVal !== 'All' || subcategoryVal !== 'All' || courseVal !== 'All' || searchVal !== '') && (
+            <div className="flex flex-wrap gap-2 items-center pt-2">
+              <span className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">Active Filters:</span>
+              {searchVal !== '' && (
+                <span className="inline-flex items-center gap-1 bg-[#EEF4FF] text-[#4F7DF6] text-xs font-bold px-2.5 py-1 rounded-lg border border-[#EEF4FF]">
+                  Search: "{searchVal}"
+                  <button onClick={() => setSearchVal('')} className="p-0.5 hover:bg-[#4F7DF6]/10 rounded-full transition-colors cursor-pointer">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {categoryVal !== 'All' && (
+                <span className="inline-flex items-center gap-1 bg-[#EEF4FF] text-[#4F7DF6] text-xs font-bold px-2.5 py-1 rounded-lg border border-[#EEF4FF]">
+                  Category: {categoryVal}
+                  <button onClick={() => {
+                    setCategoryVal('All');
+                    setSubcategoryVal('All');
+                    setCourseVal('All');
+                  }} className="p-0.5 hover:bg-[#4F7DF6]/10 rounded-full transition-colors cursor-pointer">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {subcategoryVal !== 'All' && (
+                <span className="inline-flex items-center gap-1 bg-[#EEF4FF] text-[#4F7DF6] text-xs font-bold px-2.5 py-1 rounded-lg border border-[#EEF4FF]">
+                  Subcategory: {subcategoryVal}
+                  <button onClick={() => {
+                    setSubcategoryVal('All');
+                    setCourseVal('All');
+                  }} className="p-0.5 hover:bg-[#4F7DF6]/10 rounded-full transition-colors cursor-pointer">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {courseVal !== 'All' && (
+                <span className="inline-flex items-center gap-1 bg-[#EEF4FF] text-[#4F7DF6] text-xs font-bold px-2.5 py-1 rounded-lg border border-[#EEF4FF] max-w-[250px]">
+                  <span className="truncate">Course: {MOCK_COURSES.find(c => c.id === courseVal)?.title}</span>
+                  <button onClick={() => setCourseVal('All')} className="p-0.5 hover:bg-[#4F7DF6]/10 rounded-full transition-colors cursor-pointer shrink-0">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              <button
+                onClick={handleClearAll}
+                className="text-xs font-bold text-[#64748B] hover:text-rose-500 transition-colors cursor-pointer underline decoration-dotted"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+        </div>
+
         {filteredCourses.length === 0 ? (
           <Card className="p-12 text-center max-w-md mx-auto space-y-4">
             <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto border border-rose-100">
               <Heart className="w-8 h-8" strokeWidth={1.5} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-[#1E293B]">Your wishlist is empty</h3>
-              <p className="text-xs text-[#64748B] mt-1">Explore our courses and tap the heart icon on any course to save it for later.</p>
+              <h3 className="text-lg font-bold text-[#1E293B]">No courses found</h3>
+              <p className="text-xs text-[#64748B] mt-1">Try adjusting your filters or search terms to find what you are looking for.</p>
             </div>
             <button
-              onClick={() => setActiveSubTab('all')}
+              onClick={handleClearAll}
               className="px-4 py-2 bg-[#EEF4FF] hover:bg-[#E0EBFF] text-[#4F7DF6] text-xs font-bold rounded-xl border border-[#EEF4FF] hover:border-[#4F7DF6]/20 transition-all cursor-pointer"
             >
-              Browse All Courses
+              Reset Filters
             </button>
           </Card>
         ) : (
@@ -122,7 +432,7 @@ export default function CoursesPage() {
                     <Badge variant="primary" size="sm">{course.subject}</Badge>
                     <span className="text-xs font-bold text-[#F59E0B] flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-current" /> {course.rating}</span>
                   </div>
-                  <h3 className="text-base font-bold text-[#1E293B]">{course.title}</h3>
+                  <h3 className="text-base font-bold text-[#1E293B] line-clamp-2">{course.title}</h3>
                   <p className="text-xs text-[#94A3B8]">{course.instructor}</p>
                 </div>
 

@@ -18,7 +18,7 @@ export default function MyLearningPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {MOCK_COURSES.map(course => (
+          {MOCK_COURSES.filter(course => course.progress > 0).map(course => (
             <Card key={course.id} className="p-6 flex flex-col justify-between space-y-4">
               <div className="flex gap-4 items-start">
                 <img src={course.image} alt="" className="w-24 h-24 rounded-[14px] object-cover shrink-0 border border-[#E2E8F0]" />
