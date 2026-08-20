@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Flame,
@@ -30,13 +31,22 @@ import { useAuth } from '../../context/AuthContext';
 import { apiGet } from '../../config/api';
 import { MOCK_COURSES, MOCK_HANDMADE_NOTES, MOCK_LEADERBOARD, MOCK_TEACHERS } from '../../data/mockData';
 
+import TutorDashboard from '../tutor/TutorDashboard';
+
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.3, delay } }
 });
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const { user, setActiveTab } = useAuth();
+
+  // If user is a Tutor or Faculty member, show the specialized Educator Studio Command Center
+  if (user?.role === 'tutor' || user?.role === 'faculty') {
+    return <TutorDashboard />;
+  }
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -175,9 +185,7 @@ export default function DashboardPage() {
               <Button
                 variant="primary"
                 icon={PlusCircle}
-                onClick={() => {
-                  if (setActiveTab) setActiveTab('upload');
-                }}
+                onClick={() => navigate('/upload/notes')}
                 className="shadow-lg shadow-blue-600/30"
               >
                 Upload Notebook Note
@@ -185,9 +193,7 @@ export default function DashboardPage() {
               <Button
                 variant="accent"
                 icon={Bot}
-                onClick={() => {
-                  if (setActiveTab) setActiveTab('ai-tutor');
-                }}
+                onClick={() => navigate('/ai-tutor')}
                 className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-600/30"
               >
                 Launch AI Tutor
@@ -293,17 +299,13 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => {
-                      if (setActiveTab) setActiveTab('explore');
-                    }}
+                    onClick={() => navigate('/explore')}
                     className="text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-full flex items-center gap-1 transition-all"
                   >
                     <Bookmark className="w-3.5 h-3.5 fill-current" /> Bookmarked Notes
                   </button>
                   <button
-                    onClick={() => {
-                      if (setActiveTab) setActiveTab('explore');
-                    }}
+                    onClick={() => navigate('/explore')}
                     className="text-xs font-semibold text-[#4F7DF6] hover:underline flex items-center gap-1"
                   >
                     Explore Hub <ArrowRight className="w-3.5 h-3.5" />
@@ -317,9 +319,7 @@ export default function DashboardPage() {
                     key={note.id}
                     hover
                     className="flex flex-col justify-between p-4 space-y-3 cursor-pointer group border border-[#E2E8F0] hover:border-[#4F7DF6]/40"
-                    onClick={() => {
-                      if (setActiveTab) setActiveTab('explore');
-                    }}
+                    onClick={() => navigate('/explore')}
                   >
                     <div className="space-y-3">
                       <div className="relative h-36 rounded-[12px] overflow-hidden bg-slate-100 border border-[#E2E8F0]">
@@ -414,9 +414,7 @@ export default function DashboardPage() {
                 size="sm"
                 fullWidth
                 icon={Bot}
-                onClick={() => {
-                  if (setActiveTab) setActiveTab('ai-tutor');
-                }}
+                onClick={() => navigate('/ai-tutor')}
                 className="bg-purple-600 hover:bg-purple-700 text-white"
               >
                 Ask AI Tutor Now
@@ -433,9 +431,7 @@ export default function DashboardPage() {
                   <h4 className="text-sm font-bold text-[#1E293B]">Top Peer Scholars</h4>
                 </div>
                 <button
-                  onClick={() => {
-                    if (setActiveTab) setActiveTab('leaderboard');
-                  }}
+                  onClick={() => navigate('/leaderboard')}
                   className="text-xs text-[#4F7DF6] font-semibold hover:underline"
                 >
                   View All

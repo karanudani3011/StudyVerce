@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ToastProvider } from '../context/ToastContext';
+import { CommunityProvider } from '../context/CommunityContext';
 import { Spinner } from '../components/ui/index.jsx';
 import { MobileBottomNav } from '../components/layout/AppLayout.jsx';
 
@@ -96,71 +97,73 @@ export const AppRouter = () => (
   <BrowserRouter>
     <AuthProvider>
       <ToastProvider>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            {/* Public */}
-            <Route path="/"                  element={<LandingPage />} />
-            <Route path="/login"             element={<LoginPage />} />
-            <Route path="/register"          element={<RegisterPage />} />
-            <Route path="/forgot-password"   element={<ForgotPassword />} />
-            <Route path="/otp"               element={<OTPVerify />} />
-            <Route path="/reset-password"    element={<ResetPassword />} />
-            <Route path="/about"             element={<AboutPage />} />
-            <Route path="/blog"              element={<BlogPage />} />
-            {/* <Route path="/careers"           element={<CareersPage />} /> */}
-            {/* <Route path="/press"             element={<PressPage />} /> */}
-            <Route path="/contact"           element={<ContactPage />} />
-            <Route path="/feedback"          element={<FeedbackPage />} />
-            <Route path="/help"              element={<HelpPage />} />
-            <Route path="/faq"               element={<FAQPage />} />
-            <Route path="/privacy"           element={<PrivacyPage />} />
-            <Route path="/terms"             element={<TermsPage />} />
-            <Route path="/security"          element={<SecurityPage />} />
-            <Route path="/cookies"           element={<CookiesPage />} />
-            <Route path="/premium"           element={<PremiumPage />} />
-            <Route path="/maintenance"       element={<Maintenance />} />
+        <CommunityProvider>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public */}
+              <Route path="/"                  element={<LandingPage />} />
+              <Route path="/login"             element={<LoginPage />} />
+              <Route path="/register"          element={<RegisterPage />} />
+              <Route path="/forgot-password"   element={<ForgotPassword />} />
+              <Route path="/otp"               element={<OTPVerify />} />
+              <Route path="/reset-password"    element={<ResetPassword />} />
+              <Route path="/about"             element={<AboutPage />} />
+              <Route path="/blog"              element={<BlogPage />} />
+              {/* <Route path="/careers"           element={<CareersPage />} /> */}
+              {/* <Route path="/press"             element={<PressPage />} /> */}
+              <Route path="/contact"           element={<ContactPage />} />
+              <Route path="/feedback"          element={<FeedbackPage />} />
+              <Route path="/help"              element={<HelpPage />} />
+              <Route path="/faq"               element={<FAQPage />} />
+              <Route path="/privacy"           element={<PrivacyPage />} />
+              <Route path="/terms"             element={<TermsPage />} />
+              <Route path="/security"          element={<SecurityPage />} />
+              <Route path="/cookies"           element={<CookiesPage />} />
+              <Route path="/premium"           element={<PremiumPage />} />
+              <Route path="/maintenance"       element={<Maintenance />} />
 
-            {/* Protected Application Routes */}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/dashboard"         element={<DashboardPage />} />
-              <Route path="/feed"              element={<FeedPage />} />
-              <Route path="/feed/:postId"      element={<PostDetails />} />
-              <Route path="/reels"             element={<ReelsPage />} />
-              <Route path="/explore"           element={<ExplorePage />} />
-              <Route path="/search"            element={<SearchPage />} />
-              <Route path="/categories"        element={<CategoriesPage />} />
-              <Route path="/subjects"          element={<SubjectsPage />} />
-              <Route path="/communities"       element={<CommunitiesPage />} />
-              <Route path="/communities/:id"   element={<CommunityDetails />} />
-              <Route path="/ai-tutor"          element={<AITutorPage />} />
-              <Route path="/courses"           element={<CoursesPage />} />
-              <Route path="/courses/:id"       element={<CourseDetails />} />
-              <Route path="/my-learning"       element={<MyLearningPage />} />
-              <Route path="/upload/image"      element={<UploadImage />} />
-              <Route path="/upload/reel"       element={<UploadReel />} />
-              <Route path="/upload/pdf"        element={<UploadPDF />} />
-              <Route path="/upload/notes"      element={<UploadNotes />} />
-              <Route path="/upload/validate"   element={<AIValidation />} />
-              <Route path="/notifications"     element={<NotificationsPage />} />
-              <Route path="/messages"          element={<MessagesPage />} />
-              <Route path="/messages/:id"      element={<ChatPage />} />
-              <Route path="/profile"           element={<ProfilePage />} />
-              <Route path="/profile/edit"      element={<EditProfile />} />
-              <Route path="/saved"             element={<SavedPage />} />
-              <Route path="/bookmarks"         element={<BookmarksPage />} />
-              <Route path="/certificates"      element={<CertificatesPage />} />
-              <Route path="/leaderboard"       element={<LeaderboardPage />} />
-              <Route path="/achievements"      element={<AchievementsPage />} />
-              <Route path="/settings"          element={<SettingsPage />} />
-              <Route path="/subscription"      element={<SubscriptionPage />} />
-              <Route path="/payment"           element={<PaymentPage />} />
-              <Route path="/payment/success"   element={<PaymentSuccess />} />
-            </Route>
+              {/* Protected Application Routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/dashboard"         element={<DashboardPage />} />
+                <Route path="/feed"              element={<FeedPage />} />
+                <Route path="/feed/:postId"      element={<PostDetails />} />
+                <Route path="/reels"             element={<ReelsPage />} />
+                <Route path="/explore"           element={<ExplorePage />} />
+                <Route path="/search"            element={<SearchPage />} />
+                <Route path="/categories"        element={<CategoriesPage />} />
+                <Route path="/subjects"          element={<SubjectsPage />} />
+                <Route path="/communities"       element={<CommunitiesPage />} />
+                <Route path="/communities/:id"   element={<CommunityDetails />} />
+                <Route path="/ai-tutor"          element={<AITutorPage />} />
+                <Route path="/courses"           element={<CoursesPage />} />
+                <Route path="/courses/:id"       element={<CourseDetails />} />
+                <Route path="/my-learning"       element={<MyLearningPage />} />
+                <Route path="/upload/image"      element={<UploadImage />} />
+                <Route path="/upload/reel"       element={<UploadReel />} />
+                <Route path="/upload/pdf"        element={<UploadPDF />} />
+                <Route path="/upload/notes"      element={<UploadNotes />} />
+                <Route path="/upload/validate"   element={<AIValidation />} />
+                <Route path="/notifications"     element={<NotificationsPage />} />
+                <Route path="/messages"          element={<MessagesPage />} />
+                <Route path="/messages/:id"      element={<ChatPage />} />
+                <Route path="/profile"           element={<ProfilePage />} />
+                <Route path="/profile/edit"      element={<EditProfile />} />
+                <Route path="/saved"             element={<SavedPage />} />
+                <Route path="/bookmarks"         element={<BookmarksPage />} />
+                <Route path="/certificates"      element={<CertificatesPage />} />
+                <Route path="/leaderboard"       element={<LeaderboardPage />} />
+                <Route path="/achievements"      element={<AchievementsPage />} />
+                <Route path="/settings"          element={<SettingsPage />} />
+                <Route path="/subscription"      element={<SubscriptionPage />} />
+                <Route path="/payment"           element={<PaymentPage />} />
+                <Route path="/payment/success"   element={<PaymentSuccess />} />
+              </Route>
 
-            <Route path="*"                  element={<NotFound />} />
-          </Routes>
-          <MobileBottomNav />
-        </Suspense>
+              <Route path="*"                  element={<NotFound />} />
+            </Routes>
+            <MobileBottomNav />
+          </Suspense>
+        </CommunityProvider>
       </ToastProvider>
     </AuthProvider>
   </BrowserRouter>

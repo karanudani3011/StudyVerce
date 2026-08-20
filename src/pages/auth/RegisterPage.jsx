@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User } from 'lucide-react';
+import { Mail, Lock, User, GraduationCap, Award, Building2 } from 'lucide-react';
 import {
   AuthenticationLayout,
   AuthCard,
@@ -18,15 +18,19 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
 export default function RegisterPage() {
-  const { register, loginWithProvider } = useAuth();
+  const { register, registerTutor, loginWithProvider } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
+  const [accountType, setAccountType] = useState('student'); // 'student' | 'tutor'
   const [form, setForm] = useState({
     fullName: '',
     email: '',
     password: '',
     confirmPassword: '',
+    institution: 'Stanford University',
+    department: 'Computer Science & AI',
+    title: 'Faculty / Lead Instructor',
   });
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -52,12 +56,26 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await register({
-        name: form.fullName,
-        email: form.email,
-        password: form.password,
-      });
-      addToast('Account created successfully! Welcome to StudyVerse 🎉', 'success');
+      if (accountType === 'tutor') {
+        await registerTutor({
+          name: form.fullName,
+          email: form.email,
+          password: form.password,
+          institution: form.institution,
+          department: form.department,
+          title: form.title,
+          role: 'tutor',
+        });
+        addToast('Tutor / Faculty account created successfully! Welcome 🎉', 'success');
+      } else {
+        await register({
+          name: form.fullName,
+          email: form.email,
+          password: form.password,
+          role: 'student',
+        });
+        addToast('Account created successfully! Welcome to StudyVerse 🎉', 'success');
+      }
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -81,13 +99,11 @@ export default function RegisterPage() {
     }
   };
 
-
-
   return (
     <AuthenticationLayout>
       <AuthCard>
         {/* Header */}
-        <div className="text-center space-y-1 mb-5">
+        <div className="text-center space-y-1 mb-4">
           <div className="flex justify-center mb-2">
             <Logo size="md" />
           </div>
@@ -95,8 +111,36 @@ export default function RegisterPage() {
             Create Free Account ✨
           </h2>
           <p className="text-xs sm:text-sm font-normal text-[#64748B]">
-            Start your AI-powered learning experience
+            Start your AI-powered learning & teaching journey
           </p>
+        </div>
+
+        {/* Account Type Selector (Student vs Tutor / Faculty) */}
+        <div className="grid grid-cols-2 gap-2 p-1 bg-[#F1F5F9] rounded-xl mb-4 border border-[#E2E8F0]">
+          <button
+            type="button"
+            onClick={() => setAccountType('student')}
+            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              accountType === 'student'
+                ? 'bg-white text-[#4F7DF6] shadow-xs'
+                : 'text-[#64748B] hover:text-[#1E293B]'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4 text-[#4F7DF6]" />
+            Student Account
+          </button>
+          <button
+            type="button"
+            onClick={() => setAccountType('tutor')}
+            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              accountType === 'tutor'
+                ? 'bg-[#1E293B] text-white shadow-xs'
+                : 'text-[#64748B] hover:text-[#1E293B]'
+            }`}
+          >
+            <Award className="w-4 h-4 text-amber-400" />
+            Tutor / Faculty
+          </button>
         </div>
 
         {/* Register Form */}
@@ -105,7 +149,7 @@ export default function RegisterPage() {
             label="Full Name"
             name="fullName"
             type="text"
-            placeholder="Alex Johnson"
+            placeholder={accountType === 'tutor' ? 'Dr. Sarah Chen' : 'Alex Johnson'}
             icon={User}
             value={form.fullName}
             onChange={handleChange}
@@ -116,12 +160,35 @@ export default function RegisterPage() {
             label="Email"
             name="email"
             type="email"
-            placeholder="alex@stanford.edu"
+            placeholder={accountType === 'tutor' ? 'sarah.chen@mit.edu' : 'alex@stanford.edu'}
             icon={Mail}
             value={form.email}
             onChange={handleChange}
             required
           />
+
+          {accountType === 'tutor' && (
+            <>
+              <Input
+                label="Institution / University"
+                name="institution"
+                type="text"
+                placeholder="MIT / Stanford / IIT Bombay"
+                icon={Building2}
+                value={form.institution}
+                onChange={handleChange}
+              />
+              <Input
+                label="Department & Title"
+                name="department"
+                type="text"
+                placeholder="Computer Science · Lead Educator"
+                icon={Award}
+                value={form.department}
+                onChange={handleChange}
+              />
+            </>
+          )}
 
           <PasswordInput
             label="Password"

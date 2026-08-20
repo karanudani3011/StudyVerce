@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Star, Clock, Users, Heart, Search,
-  ChevronDown, Check, SlidersHorizontal, X, RotateCcw, Award
+  ChevronDown, Check, SlidersHorizontal, X, RotateCcw, Award, Plus
 } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Badge } from '../../components/ui/index.jsx';
 import { MOCK_COURSES } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { CourseUploadModal } from '../../components/courses/CourseUploadModal';
+import { apiGet } from '../../config/api';
 
 // Custom Dropdown select component
 function CustomDropdown({ label, options, selectedValue, onChange, disabled, icon: Icon, placeholder }) {
@@ -109,6 +111,8 @@ export default function CoursesPage() {
   const { user, toggleCourseWishlist } = useAuth();
   const { addToast } = useToast();
   const [activeSubTab, setActiveSubTab] = useState('all');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [coursesList, setCoursesList] = useState(MOCK_COURSES);
 
   // Search & Filter State
   const [searchVal, setSearchVal] = useState('');
@@ -117,6 +121,67 @@ export default function CoursesPage() {
   const [courseVal, setCourseVal] = useState('All');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [isAnimatedOpen, setIsAnimatedOpen] = useState(false);
+
+  // Fetch persisted courses from MongoDB backend
+  useEffect(() => {
+    const fetchBackendCourses = async () => {
+      try {
+        const res = await apiGet('/courses');
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const formatted = res.data.map(c => ({
+            id: c._id || c.id,
+            title: c.title,
+            instructor: c.instructor,
+            instructorAvatar: c.instructorAvatar,
+            image: c.image,
+            tags: c.tags || [],
+            duration: c.duration,
+            lessons: c.lessons,
+            students: c.students || '1',
+            rating: c.rating || 4.9,
+            progress: c.progress || 0,
+            level: c.level,
+            price: c.price,
+            subject: c.subject,
+            category: c.category,
+            subcategory: c.subcategory,
+            description: c.description,
+            lectures: c.lectures,
+          }));
+          setCoursesList([...formatted, ...MOCK_COURSES]);
+        }
+      } catch (err) {
+        console.warn('Backend courses fetch skipped/offline:', err.message);
+      }
+    };
+    fetchBackendCourses();
+  }, []);
+
+  const handleCourseCreated = (newCourse) => {
+    const formattedNewCourse = {
+      id: newCourse._id || `c_new_${Date.now()}`,
+      title: newCourse.title,
+      instructor: newCourse.instructor,
+      instructorAvatar: newCourse.instructorAvatar,
+      image: newCourse.image,
+      tags: newCourse.tags || [],
+      duration: newCourse.duration,
+      lessons: newCourse.lessons,
+      students: newCourse.students || '1',
+      rating: newCourse.rating || 4.9,
+      progress: 0,
+      level: newCourse.level,
+      price: newCourse.price,
+      subject: newCourse.subject,
+      category: newCourse.category,
+      subcategory: newCourse.subcategory,
+      description: newCourse.description,
+      lectures: newCourse.lectures || [],
+    };
+
+    setCoursesList(prev => [formattedNewCourse, ...prev]);
+    addToast('Course uploaded & published to course catalog! 🎉', 'success');
+  };
 
   const isWishlisted = (courseId) => {
     return user?.wishlistedCourses?.includes(courseId);
@@ -148,16 +213,16 @@ export default function CoursesPage() {
 
   const subcategoryOptions = categoryVal === 'All'
     ? []
-    : ['All', ...new Set(MOCK_COURSES.filter(c => c.category === categoryVal).map(c => c.subcategory).filter(Boolean))];
+    : ['All', ...new Set(coursesList.filter(c => c.category === categoryVal).map(c => c.subcategory).filter(Boolean))];
 
   const courseOptions = subcategoryVal === 'All' || categoryVal === 'All'
     ? []
-    : ['All', ...MOCK_COURSES.filter(c => c.category === categoryVal && c.subcategory === subcategoryVal)];
+    : ['All', ...coursesList.filter(c => c.category === categoryVal && c.subcategory === subcategoryVal)];
 
   // Apply filters
   let filteredCourses = activeSubTab === 'all'
-    ? MOCK_COURSES
-    : MOCK_COURSES.filter(c => isWishlisted(c.id));
+    ? coursesList
+    : coursesList.filter(c => isWishlisted(c.id));
 
   // 1. Search Query filter
   if (searchVal.trim() !== '') {
@@ -193,40 +258,59 @@ export default function CoursesPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-extrabold text-[#1E293B]">All Courses</h1>
-            <p className="text-sm text-[#64748B]">Structured learning paths curated by top professors.</p>
+            <p className="text-sm text-[#64748B]">Structured learning paths curated by top professors and verified faculty.</p>
           </div>
 
-          {/* Sub Tabs */}
-          <div className="flex gap-2 bg-[#F1F5F9] p-1 rounded-xl self-start sm:self-auto border border-[#E2E8F0]">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Upload Course Button for Tutor / Faculty or any User */}
             <button
-              onClick={() => setActiveSubTab('all')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeSubTab === 'all'
-                  ? 'bg-white text-[#4F7DF6] shadow-xs'
-                  : 'text-[#64748B] hover:text-[#1E293B]'
-              }`}
+              onClick={() => setIsUploadModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#1E293B] to-[#0F172A] text-white hover:from-slate-800 hover:to-slate-900 text-xs font-bold transition-all shadow-md shadow-slate-950/20 flex items-center gap-2 cursor-pointer border border-slate-700"
             >
-              All Courses
+              <Award className="w-4 h-4 text-amber-400" />
+              Upload Course 🎓
             </button>
-            <button
-              onClick={() => setActiveSubTab('wishlist')}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeSubTab === 'wishlist'
-                  ? 'bg-white text-rose-500 shadow-xs'
-                  : 'text-[#64748B] hover:text-[#1E293B]'
-              }`}
-            >
-              My Wishlist
-              {wishlistCount > 0 && (
-                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                  activeSubTab === 'wishlist' ? 'bg-rose-50 text-white' : 'bg-[#E2E8F0] text-[#64748B]'
-                }`}>
-                  {wishlistCount}
-                </span>
-              )}
-            </button>
+
+            {/* Sub Tabs */}
+            <div className="flex gap-2 bg-[#F1F5F9] p-1 rounded-xl self-start sm:self-auto border border-[#E2E8F0]">
+              <button
+                onClick={() => setActiveSubTab('all')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeSubTab === 'all'
+                    ? 'bg-white text-[#4F7DF6] shadow-xs'
+                    : 'text-[#64748B] hover:text-[#1E293B]'
+                }`}
+              >
+                All Courses ({coursesList.length})
+              </button>
+              <button
+                onClick={() => setActiveSubTab('wishlist')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeSubTab === 'wishlist'
+                    ? 'bg-white text-rose-500 shadow-xs'
+                    : 'text-[#64748B] hover:text-[#1E293B]'
+                }`}
+              >
+                My Wishlist
+                {wishlistCount > 0 && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                    activeSubTab === 'wishlist' ? 'bg-rose-50 text-white' : 'bg-[#E2E8F0] text-[#64748B]'
+                  }`}>
+                    {wishlistCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Modal Component */}
+        <CourseUploadModal
+          isOpen={isUploadModalOpen}
+          onClose={() => setIsUploadModalOpen(false)}
+          onCourseCreated={handleCourseCreated}
+          currentUser={user}
+        />
 
         {/* Search & Filter Bar */}
         <div className="space-y-3">

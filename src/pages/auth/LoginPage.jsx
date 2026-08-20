@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, GraduationCap, Award } from 'lucide-react';
 import {
   AuthenticationLayout,
   AuthCard,
@@ -18,9 +18,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
 export default function LoginPage() {
-  const { login, loginWithProvider } = useAuth();
+  const { login, loginTutor, loginWithProvider } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const [accountType, setAccountType] = useState('student'); // 'student' | 'tutor'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -30,8 +31,13 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await login({ email, password });
-      addToast('Welcome back to StudyVerse! 👋', 'success');
+      if (accountType === 'tutor') {
+        await loginTutor({ email, password });
+        addToast('Welcome back, Professor / Tutor! 👨‍🏫', 'success');
+      } else {
+        await login({ email, password });
+        addToast('Welcome back to StudyVerse! 👋', 'success');
+      }
       navigate('/dashboard');
     } catch (error) {
       addToast(error.message || 'Login failed. Please check your credentials.', 'error');
@@ -54,13 +60,11 @@ export default function LoginPage() {
     }
   };
 
-
-
   return (
     <AuthenticationLayout>
       <AuthCard>
         {/* Header */}
-        <div className="text-center space-y-1 mb-6">
+        <div className="text-center space-y-1 mb-4">
           <div className="flex justify-center mb-2.5">
             <Logo size="md" />
           </div>
@@ -68,8 +72,36 @@ export default function LoginPage() {
             Welcome Back 👋
           </h2>
           <p className="text-xs sm:text-sm font-normal text-[#64748B]">
-            Continue your learning journey
+            {accountType === 'tutor' ? 'Log in to your Tutor / Faculty Portal' : 'Continue your learning journey'}
           </p>
+        </div>
+
+        {/* Account Type Selector (Student vs Tutor / Faculty) */}
+        <div className="grid grid-cols-2 gap-2 p-1 bg-[#F1F5F9] rounded-xl mb-4 border border-[#E2E8F0]">
+          <button
+            type="button"
+            onClick={() => setAccountType('student')}
+            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              accountType === 'student'
+                ? 'bg-white text-[#4F7DF6] shadow-xs'
+                : 'text-[#64748B] hover:text-[#1E293B]'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4 text-[#4F7DF6]" />
+            Student Login
+          </button>
+          <button
+            type="button"
+            onClick={() => setAccountType('tutor')}
+            className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              accountType === 'tutor'
+                ? 'bg-[#1E293B] text-white shadow-xs'
+                : 'text-[#64748B] hover:text-[#1E293B]'
+            }`}
+          >
+            <Award className="w-4 h-4 text-amber-400" />
+            Tutor / Faculty
+          </button>
         </div>
 
         {/* Login Form */}

@@ -16,16 +16,19 @@ import {
   Share2,
   Bookmark,
   Layers,
-  GraduationCap
+  GraduationCap,
+  Plus
 } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Badge, Avatar } from '../../components/ui/index.jsx';
 import { Button } from '../../components/ui/Button';
 import { MOCK_HANDMADE_NOTES } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
+import { UploadNotebookModal } from '../../components/explore/UploadNotebookModal';
+import { apiGet } from '../../config/api';
 
 export default function ExplorePage() {
-  const { setActiveTab } = useAuth();
+  const { setActiveTab, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedFormat, setSelectedFormat] = useState('All');
@@ -33,6 +36,69 @@ export default function ExplorePage() {
   const [selectedNote, setSelectedNote] = useState(null);
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [activeView, setActiveView] = useState('all'); // 'all' | 'saved' | 'liked'
+  const [isNotebookModalOpen, setIsNotebookModalOpen] = useState(false);
+  const [exploreNotesList, setExploreNotesList] = useState(MOCK_HANDMADE_NOTES);
+
+  // Fetch persisted Explore notes from MongoDB backend
+  useEffect(() => {
+    const fetchExploreNotes = async () => {
+      try {
+        const res = await apiGet('/notes?destination=explore');
+        if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const formattedBackendNotes = res.data.map(n => ({
+            id: n._id || n.id,
+            title: n.title,
+            subject: n.subject || 'General Study',
+            type: n.type || n.format || 'Handwritten Pages',
+            format: n.format || n.type || 'Handwritten Pages',
+            description: n.description || '',
+            coverImage: n.coverImage || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
+            previewImages: n.previewImages && n.previewImages.length > 0 ? n.previewImages : [n.coverImage || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80'],
+            pdfUrl: n.pdfUrl || n.coverImage,
+            tags: n.tags || ['handwritten', 'notes'],
+            author: n.author || {
+              name: n.creatorId?.name || 'Scholar Contributor',
+              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+              university: 'Stanford University',
+            },
+            likesCount: n.likesCount || 5,
+            savesCount: n.savesCount || 2,
+            pagesCount: n.pagesCount || (n.previewImages?.length || 10),
+            rating: n.rating || 4.9,
+          }));
+          setExploreNotesList([...formattedBackendNotes, ...MOCK_HANDMADE_NOTES]);
+        }
+      } catch (err) {
+        console.warn('Backend Explore notes fetch skipped/offline:', err.message);
+      }
+    };
+    fetchExploreNotes();
+  }, []);
+
+  const handleNotebookUploaded = (newNote) => {
+    const formattedNote = {
+      id: newNote._id || `note_new_${Date.now()}`,
+      title: newNote.title,
+      subject: newNote.subject || 'Computer Science',
+      type: newNote.type || 'Handwritten Pages',
+      format: newNote.format || newNote.type || 'Handwritten Pages',
+      description: newNote.description || '',
+      coverImage: newNote.coverImage || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
+      previewImages: newNote.previewImages || [newNote.coverImage],
+      pdfUrl: newNote.pdfUrl || newNote.coverImage,
+      tags: newNote.tags || ['handwritten', 'notes'],
+      author: newNote.author || {
+        name: user?.name || 'Scholar Contributor',
+        avatar: user?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        university: user?.institution || 'Stanford University',
+      },
+      likesCount: 1,
+      savesCount: 1,
+      pagesCount: newNote.pagesCount || 8,
+      rating: 4.9,
+    };
+    setExploreNotesList(prev => [formattedNote, ...prev]);
+  };
 
   // Persist bookmarked notes in localStorage
   const [savedNotes, setSavedNotes] = useState(() => {
@@ -93,25 +159,25 @@ export default function ExplorePage() {
   const likedCount = Object.values(likedNotes).filter(Boolean).length;
 
   // Filter notes
-  const filteredNotes = MOCK_HANDMADE_NOTES.filter((note) => {
+  const filteredNotes = exploreNotesList.filter((note) => {
     if (activeView === 'saved' && !savedNotes[note.id]) return false;
     if (activeView === 'liked' && !likedNotes[note.id]) return false;
 
     const matchesCategory = selectedCategory === 'All' || note.subject === selectedCategory;
-    const matchesFormat = selectedFormat === 'All' || note.formatKey === selectedFormat;
+    const matchesFormat = selectedFormat === 'All' || note.formatKey === selectedFormat || note.type === selectedFormat || note.format === selectedFormat;
     const matchesSearch = 
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       note.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      note.author.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      note.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      (note.author?.name && note.author.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (note.tags && note.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
     
     return matchesCategory && matchesFormat && matchesSearch;
   }).sort((a, b) => {
-    const aLikes = a.likes + (likedNotes[a.id] ? 1 : 0);
-    const bLikes = b.likes + (likedNotes[b.id] ? 1 : 0);
+    const aLikes = (a.likes || a.likesCount || 0) + (likedNotes[a.id] ? 1 : 0);
+    const bLikes = (b.likes || b.likesCount || 0) + (likedNotes[b.id] ? 1 : 0);
     if (sortBy === 'popular') return bLikes - aLikes;
-    if (sortBy === 'rating') return b.rating - a.rating;
-    if (sortBy === 'pages') return b.pagesCount - a.pagesCount;
+    if (sortBy === 'rating') return (b.rating || 4.9) - (a.rating || 4.9);
+    if (sortBy === 'pages') return (b.pagesCount || 10) - (a.pagesCount || 10);
     return 0;
   });
 
@@ -167,7 +233,7 @@ export default function ExplorePage() {
           </div>
         </div>
 
-        {/* View Selection Tabs: All Notebooks | Bookmarked 🔖 | Liked ❤️ */}
+        {/* View Selection Tabs: All Notebooks | Bookmarked 🔖 | Liked ❤️ | Upload Notebook 📝 */}
         <div className="flex flex-wrap items-center justify-between gap-3 p-2 bg-[#F8FAFC] rounded-[18px] border border-[#E2E8F0]">
           <div className="flex items-center gap-2 flex-wrap">
             <button
@@ -179,7 +245,7 @@ export default function ExplorePage() {
               }`}
             >
               <BookOpen className="w-4 h-4 text-[#4F7DF6]" />
-              All Notebooks ({MOCK_HANDMADE_NOTES.length})
+              All Notebooks ({exploreNotesList.length})
             </button>
 
             <button
@@ -207,12 +273,22 @@ export default function ExplorePage() {
             </button>
           </div>
 
-          {(activeView === 'saved' || activeView === 'liked') && (
-            <span className="text-xs font-semibold text-[#4F7DF6] bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
-              Showing {activeView === 'saved' ? 'Bookmarked 🔖' : 'Liked ❤️'} Notebook Collection
-            </span>
-          )}
+          <button
+            onClick={() => setIsNotebookModalOpen(true)}
+            className="px-4 py-2.5 rounded-[14px] bg-gradient-to-r from-[#4F7DF6] to-[#3B82F6] hover:from-blue-600 hover:to-blue-700 text-white text-xs font-bold transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 cursor-pointer border border-blue-400/30"
+          >
+            <Plus className="w-4 h-4 text-white" />
+            Upload Handmade Notebook 📝
+          </button>
         </div>
+
+        {/* Upload Notebook Modal */}
+        <UploadNotebookModal
+          isOpen={isNotebookModalOpen}
+          onClose={() => setIsNotebookModalOpen(false)}
+          onNotebookUploaded={handleNotebookUploaded}
+          currentUser={user}
+        />
 
         {/* Filter Controls Bar */}
         <div className="space-y-4">

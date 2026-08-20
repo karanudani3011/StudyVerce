@@ -5,25 +5,50 @@ import {
   Sparkles, Search, Bell, Menu, X, LayoutDashboard,
   Newspaper, Compass, Users, Bot, PlusCircle, Trophy,
   MessageSquare, User, Settings, LogOut, Flame, Zap,
-  BookOpen, ChevronDown, Filter
+  BookOpen, ChevronDown, Filter, GraduationCap, BarChart3, Shield, CheckCircle2, Flag
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Avatar, Badge } from '../ui/index.jsx';
 import { MOCK_NOTIFICATIONS } from '../../data/mockData';
 
-// ─── SIDEBAR NAV ITEMS ───────────────────────────────────────────────────────
-const sidebarNav = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/feed', label: 'Home Feed', icon: Newspaper, badge: 'Live' },
-  { to: '/explore', label: 'Explore', icon: Compass },
-  { to: '/courses', label: 'Courses', icon: BookOpen },
-  { to: '/communities', label: 'Communities', icon: Users },
-  { to: '/ai-tutor', label: 'AI Tutor', icon: Bot, isAi: true },
-  { to: '/messages', label: 'Messages', icon: MessageSquare, badgeCount: 3 },
-  { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { to: '/upload/image', label: 'Upload Note', icon: PlusCircle },
-];
+// Helper to get sidebar navigation links based on user role
+const getSidebarNav = (role) => {
+  if (role === 'admin') {
+    return [
+      { to: '/admin/dashboard', label: 'Admin Control', icon: Shield },
+      { to: '/admin/verifications', label: 'Verifications', icon: CheckCircle2, badge: 'Review' },
+      { to: '/admin/reports', label: 'Flagged Content', icon: Flag },
+      { to: '/feed', label: 'Feed', icon: Newspaper },
+      { to: '/explore', label: 'Explore', icon: Compass },
+      { to: '/communities', label: 'Communities', icon: Users },
+    ];
+  }
+
+  if (role === 'tutor' || role === 'faculty') {
+    return [
+      { to: '/dashboard', label: 'Faculty Studio', icon: GraduationCap },
+      { to: '/courses', label: 'My Courses', icon: BookOpen },
+      { to: '/explore', label: 'Lecture Notes Vault', icon: Compass },
+      { to: '/communities', label: 'My Communities', icon: Users },
+      { to: '/messages', label: 'Student Messages', icon: MessageSquare, badgeCount: 3 },
+      { to: '/tutor/analytics', label: 'Revenue & Analytics', icon: BarChart3 },
+    ];
+  }
+
+  // Default: Student
+  return [
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/feed', label: 'Home Feed', icon: Newspaper, badge: 'Live' },
+    { to: '/explore', label: 'Explore', icon: Compass },
+    { to: '/courses', label: 'Courses', icon: BookOpen },
+    { to: '/communities', label: 'Communities', icon: Users },
+    { to: '/ai-tutor', label: 'AI Tutor', icon: Bot, isAi: true },
+    { to: '/messages', label: 'Messages', icon: MessageSquare, badgeCount: 3 },
+    { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+    { to: '/upload/image', label: 'Upload Note', icon: PlusCircle },
+  ];
+};
 
 const sidebarBottom = [
   { to: '/profile', label: 'Profile', icon: User },
@@ -36,8 +61,11 @@ export const Sidebar = ({ mobile = false, onClose }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const isTutorUser = user?.role === 'tutor' || user?.role === 'faculty';
+  const navItems = getSidebarNav(user?.role);
+
   const NavItem = ({ to, label, icon: Icon, badge, badgeCount, isAi }) => {
-    const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
+    const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
     return (
       <Link to={to} onClick={mobile ? onClose : undefined}
         className={`flex items-center justify-between px-3.5 py-2.5 rounded-[14px] text-sm font-medium transition-all group ${
@@ -57,37 +85,53 @@ export const Sidebar = ({ mobile = false, onClose }) => {
   return (
     <aside className={`${mobile ? 'w-full' : 'w-64'} flex flex-col h-full bg-white border-r border-[#E2E8F0] p-4`}>
       {/* Logo */}
-      <div onClick={() => { navigate('/'); if (mobile && onClose) onClose(); }}
+      <div onClick={() => { navigate(isTutorUser ? '/dashboard' : '/'); if (mobile && onClose) onClose(); }}
         className="flex items-center gap-3 px-2 py-3 mb-4 cursor-pointer group">
         <div className="w-9 h-9 rounded-[14px] bg-[#EEF4FF] flex items-center justify-center text-[#4F7DF6] group-hover:scale-105 transition-transform border border-[#E2E8F0]">
           <Sparkles className="w-5 h-5" strokeWidth={2} />
         </div>
         <div>
           <span className="text-lg font-bold text-[#1E293B] leading-none block">StudyVerse</span>
-          <span className="text-[10px] font-semibold text-[#94A3B8] tracking-wider uppercase">Educational Platform</span>
+          <span className="text-[10px] font-semibold text-[#94A3B8] tracking-wider uppercase">
+            {isTutorUser ? 'Faculty Portal' : 'Educational Platform'}
+          </span>
         </div>
         {mobile && <button onClick={onClose} className="ml-auto p-1 text-[#94A3B8]"><X className="w-5 h-5" strokeWidth={2} /></button>}
       </div>
 
-      {/* Streak widget */}
+      {/* Streak / Faculty widget */}
       <div className="mx-1 mb-4 p-3 rounded-[14px] bg-[#F8FAFC] border border-[#E2E8F0] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-amber-50 text-[#F59E0B] rounded-[10px] border border-amber-100">
-            <Flame className="w-4 h-4" strokeWidth={2} />
+        {isTutorUser ? (
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-amber-50 text-amber-600 rounded-[10px] border border-amber-100">
+              <GraduationCap className="w-4 h-4" strokeWidth={2} />
+            </div>
+            <div>
+              <div className="text-xs font-extrabold text-[#1E293B]">Faculty Member</div>
+              <div className="text-[10px] font-bold text-emerald-600">✓ Verified Educator</div>
+            </div>
           </div>
-          <div>
-            <div className="text-xs font-bold text-[#1E293B]">{user.streak} Day Streak</div>
-            <div className="text-[10px] text-[#94A3B8]">Keep it up!</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 text-xs font-bold text-[#4F7DF6] bg-[#EEF4FF] px-2 py-0.5 rounded-full">
-          <Zap className="w-3 h-3" strokeWidth={2} /> {user.xp}
-        </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-amber-50 text-[#F59E0B] rounded-[10px] border border-amber-100">
+                <Flame className="w-4 h-4" strokeWidth={2} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-[#1E293B]">{user?.streak || 1} Day Streak</div>
+                <div className="text-[10px] text-[#94A3B8]">Keep it up!</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 text-xs font-bold text-[#4F7DF6] bg-[#EEF4FF] px-2 py-0.5 rounded-full">
+              <Zap className="w-3 h-3" strokeWidth={2} /> {user?.xp || 0}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Nav */}
       <nav className="flex-1 space-y-0.5 overflow-y-auto no-scrollbar">
-        {sidebarNav.map(item => <NavItem key={item.to} {...item} />)}
+        {navItems.map(item => <NavItem key={item.to} {...item} />)}
         <div className="border-t border-[#EDF2F7] my-3" />
         {sidebarBottom.map(item => <NavItem key={item.to} {...item} />)}
       </nav>
@@ -148,11 +192,13 @@ export const TopHeader = ({ onMenuToggle }) => {
       </form>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* AI tutor shortcut */}
-        <button onClick={() => navigate('/ai-tutor')}
-          className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-[12px] bg-purple-50 text-[#8B5CF6] text-xs font-semibold hover:bg-purple-100 transition-colors border border-purple-100 cursor-pointer">
-          <Bot className="w-3.5 h-3.5" strokeWidth={2} /> AI Tutor
-        </button>
+        {/* AI tutor shortcut (Students only) */}
+        {user?.role !== 'tutor' && user?.role !== 'faculty' && (
+          <button onClick={() => navigate('/ai-tutor')}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-[12px] bg-purple-50 text-[#8B5CF6] text-xs font-semibold hover:bg-purple-100 transition-colors border border-purple-100 cursor-pointer">
+            <Bot className="w-3.5 h-3.5" strokeWidth={2} /> AI Tutor
+          </button>
+        )}
 
         {/* Notifications */}
         <div ref={ref} className="relative">
@@ -191,7 +237,7 @@ export const TopHeader = ({ onMenuToggle }) => {
 
         {/* Avatar */}
         <button onClick={() => navigate('/profile')} className="cursor-pointer hover:opacity-85 transition-opacity">
-          <Avatar src={user.avatar} alt={user.name} size="sm" verified />
+          <Avatar src={user?.avatar} alt={user?.name} size="sm" verified />
         </button>
       </div>
     </header>
@@ -237,13 +283,23 @@ export const AppLayout = ({ children }) => {
 // ─── MOBILE BOTTOM NAV ───────────────────────────────────────────────────────
 export const MobileBottomNav = () => {
   const location = useLocation();
-  const items = [
+  const { user } = useAuth();
+  const isTutorUser = user?.role === 'tutor' || user?.role === 'faculty';
+
+  const items = isTutorUser ? [
+    { to: '/dashboard', icon: GraduationCap, label: 'Studio' },
+    { to: '/courses', icon: BookOpen, label: 'Courses' },
+    { to: '/explore', icon: Compass, label: 'Vault' },
+    { to: '/messages', icon: MessageSquare, label: 'Messages' },
+    { to: '/profile', icon: User, label: 'Profile' },
+  ] : [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
     { to: '/feed', icon: Newspaper, label: 'Feed' },
     { to: '/ai-tutor', icon: Bot, label: 'AI', special: true },
     { to: '/explore', icon: Compass, label: 'Explore' },
     { to: '/profile', icon: User, label: 'Profile' },
   ];
+
   const isApp = !['/', '/login', '/register', '/forgot-password', '/otp', '/reset-password'].includes(location.pathname);
   if (!isApp) return null;
 

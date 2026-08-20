@@ -48,11 +48,12 @@ const getPasswordStrength = (pass) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const AuthPages = () => {
-  const { activeTab, setActiveTab, login, register, loginWithProvider, forgotPassword, resetPassword } = useAuth();
+  const { activeTab, setActiveTab, login, register, registerTutor, loginWithProvider, forgotPassword, resetPassword } = useAuth();
 
   const view = activeTab; // 'login' | 'signup' | 'forgot-password' | 'otp' | 'reset-password'
 
   // Shared state
+  const [accountType, setAccountType] = useState('student'); // 'student' | 'tutor'
   const [email, setEmail]           = useState('');
   const [password, setPassword]     = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -117,8 +118,13 @@ export const AuthPages = () => {
     if (!termsAccepted) { setError('Please accept the Terms of Service to continue.'); return; }
     setLoading(true);
     try {
-      await register({ name, email, password });
-      setActiveTab('dashboard');
+      if (accountType === 'tutor') {
+        await registerTutor({ name, email, password, role: 'tutor' });
+        setActiveTab('tutor-dashboard');
+      } else {
+        await register({ name, email, password, role: 'student' });
+        setActiveTab('dashboard');
+      }
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
     } finally {
@@ -289,8 +295,35 @@ export const AuthPages = () => {
 
                 <form onSubmit={handleRegister} className="space-y-4">
                   <ErrorAlert message={error} />
+
+                  {/* Account Type Selector */}
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-[#F1F5F9] rounded-[14px]">
+                    <button
+                      type="button"
+                      onClick={() => setAccountType('student')}
+                      className={`py-2 px-3 rounded-[10px] text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        accountType === 'student'
+                          ? 'bg-white text-[#4F7DF6] shadow-sm'
+                          : 'text-[#64748B] hover:text-[#1E293B]'
+                      }`}
+                    >
+                      🎓 Student Account
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAccountType('tutor')}
+                      className={`py-2 px-3 rounded-[10px] text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        accountType === 'tutor'
+                          ? 'bg-white text-amber-600 shadow-sm'
+                          : 'text-[#64748B] hover:text-[#1E293B]'
+                      }`}
+                    >
+                      👨‍🏫 Tutor / Faculty
+                    </button>
+                  </div>
+
                   <Input label="Full Name" placeholder="Alex Johnson" icon={User} value={name} onChange={(e) => setName(e.target.value)} required />
-                  <Input label="Student Email" type="email" placeholder="alex@university.edu" icon={Mail} value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input label={accountType === 'tutor' ? 'Faculty / Official Email' : 'Student Email'} type="email" placeholder={accountType === 'tutor' ? 'prof.alex@university.edu' : 'alex@university.edu'} icon={Mail} value={email} onChange={(e) => setEmail(e.target.value)} required />
 
                   <div>
                     <Input label="Create Password" type="password" placeholder="••••••••" icon={Lock} value={password} onChange={(e) => setPassword(e.target.value)} required />

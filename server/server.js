@@ -6,6 +6,10 @@ import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import communityRoutes from './routes/communityRoutes.js';
+import noteRoutes from './routes/noteRoutes.js';
+import tutorRoutes from './routes/tutorRoutes.js';
+import courseRoutes from './routes/courseRoutes.js';
 
 // ─── Load Environment Variables ──────────────────────────────────────────────
 dotenv.config();
@@ -13,9 +17,14 @@ dotenv.config();
 // ─── Initialize Express App ─────────────────────────────────────────────────
 const app = express();
 
-// ─── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin or any localhost / 127.0.0.1 origin
+    if (!origin || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -26,6 +35,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/communities', communityRoutes);
+app.use('/api/notes', noteRoutes);
+app.use('/api/tutors', tutorRoutes);
+app.use('/api/courses', courseRoutes);
 
 // ─── Health Check ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

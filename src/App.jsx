@@ -15,6 +15,15 @@ import { SearchPage } from './pages/SearchPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
+import { RoleProtectedRoute } from './components/auth/RoleProtectedRoute';
+
+// Tutor, Admin, and Tutor Application Pages
+import TutorDashboard from './pages/tutor/TutorDashboard';
+import TutorAnalytics from './pages/tutor/TutorAnalytics';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminVerifications from './pages/admin/AdminVerifications';
+import AdminReports from './pages/admin/AdminReports';
+import ApplyTutorPage from './pages/apply-tutor/ApplyTutorPage';
 
 const MainAppRouter = () => {
   const { activeTab } = useAuth();
@@ -51,6 +60,45 @@ const MainAppRouter = () => {
         return <LeaderboardPage />;
       case 'settings':
         return <SettingsPage />;
+
+      // Tutor Protected Routes
+      case 'tutor-dashboard':
+        return (
+          <RoleProtectedRoute allowedRoles={['tutor', 'faculty', 'admin']} fallback={<DashboardPage />}>
+            <TutorDashboard />
+          </RoleProtectedRoute>
+        );
+      case 'tutor-analytics':
+        return (
+          <RoleProtectedRoute allowedRoles={['tutor', 'faculty', 'admin']} fallback={<DashboardPage />}>
+            <TutorAnalytics />
+          </RoleProtectedRoute>
+        );
+
+      // Admin Protected Routes
+      case 'admin-dashboard':
+        return (
+          <RoleProtectedRoute allowedRoles={['admin']} fallback={<DashboardPage />}>
+            <AdminDashboard />
+          </RoleProtectedRoute>
+        );
+      case 'admin-verifications':
+        return (
+          <RoleProtectedRoute allowedRoles={['admin']} fallback={<DashboardPage />}>
+            <AdminVerifications />
+          </RoleProtectedRoute>
+        );
+      case 'admin-reports':
+        return (
+          <RoleProtectedRoute allowedRoles={['admin']} fallback={<DashboardPage />}>
+            <AdminReports />
+          </RoleProtectedRoute>
+        );
+
+      // Tutor Application Form for Students
+      case 'apply-tutor':
+        return <ApplyTutorPage />;
+
       default:
         return <LandingPage />;
     }
