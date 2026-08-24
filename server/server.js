@@ -10,6 +10,10 @@ import communityRoutes from './routes/communityRoutes.js';
 import noteRoutes from './routes/noteRoutes.js';
 import tutorRoutes from './routes/tutorRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
+
+import adminRoutes from './routes/adminRoutes.js';
+import { seedDefaultAdmin } from './controllers/adminController.js';
 
 // ─── Load Environment Variables ──────────────────────────────────────────────
 dotenv.config();
@@ -32,6 +36,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ─── API Routes ─────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/ai', aiRoutes);
@@ -39,6 +44,7 @@ app.use('/api/communities', communityRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/tutors', tutorRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api/reports', reportRoutes);
 
 // ─── Health Check ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -65,4 +71,5 @@ app.listen(PORT, async () => {
   console.log(`   Health check: http://localhost:${PORT}/api/health\n`);
   // Connect to MongoDB after server is listening
   await connectDB();
+  await seedDefaultAdmin();
 });

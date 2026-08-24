@@ -27,6 +27,19 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Pre-fill remembered email on load
+  React.useEffect(() => {
+    const savedEmail = localStorage.getItem('sv_remember_email');
+    const savedType  = localStorage.getItem('sv_remember_account_type');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+    if (savedType) {
+      setAccountType(savedType);
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -38,6 +51,16 @@ export default function LoginPage() {
         await login({ email, password });
         addToast('Welcome back to StudyVerse! 👋', 'success');
       }
+
+      // Handle Remember Me
+      if (rememberMe) {
+        localStorage.setItem('sv_remember_email', email.trim());
+        localStorage.setItem('sv_remember_account_type', accountType);
+      } else {
+        localStorage.removeItem('sv_remember_email');
+        localStorage.removeItem('sv_remember_account_type');
+      }
+
       navigate('/dashboard');
     } catch (error) {
       addToast(error.message || 'Login failed. Please check your credentials.', 'error');
@@ -138,12 +161,21 @@ export default function LoginPage() {
                 Remember Me
               </span>
             </label>
-            <Link
-              to="/forgot-password"
-              className="text-xs font-semibold text-[#4F7DF6] hover:text-[#3D6CF2] hover:underline transition-colors"
-            >
-              Forgot Password?
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/admin/login"
+                className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1"
+              >
+                🛡️ Admin Login
+              </Link>
+              <span className="text-slate-300">•</span>
+              <Link
+                to="/forgot-password"
+                className="text-xs font-semibold text-[#4F7DF6] hover:text-[#3D6CF2] hover:underline transition-colors"
+              >
+                Forgot Password?
+              </Link>
+            </div>
           </div>
 
           {/* Login Button */}

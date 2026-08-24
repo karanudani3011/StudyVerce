@@ -1,132 +1,310 @@
-import React, { useState } from 'react';
-import { AppLayout } from '../../components/layout/AppLayout';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AdminLayout } from '../../components/admin/AdminLayout';
 import {
-  Shield, Users, BookOpen, Flag, TrendingUp, ToggleLeft, ToggleRight,
-  Activity, CheckCircle2, Clock, AlertTriangle, Zap, Bell
+  Shield,
+  Users,
+  GraduationCap,
+  BookOpen,
+  MessageSquare,
+  Zap,
+  Bell,
+  ArrowRight,
+  Sparkles,
+  Lightbulb,
+  CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
+  Trash2,
 } from 'lucide-react';
-
-const MOCK_ACTIVITY = [
-  { id: 1, action: 'New tutor application from Dr. Rahul Mehta', time: '5 mins ago', type: 'verify' },
-  { id: 2, action: 'Post reported by student "alex_j" — spam', time: '12 mins ago', type: 'report' },
-  { id: 3, action: 'New course published: "Quantum Entanglement Basics"', time: '34 mins ago', type: 'course' },
-  { id: 4, action: 'Student "priya_s" completed the AI Mastery certificate', time: '1 hr ago', type: 'cert' },
-  { id: 5, action: 'Community "UPSC Toppers 2025" reached 100 members', time: '2 hrs ago', type: 'community' },
-  { id: 6, action: 'New report: Comment flagged in "Physics & Quantum" community', time: '3 hrs ago', type: 'report' },
-];
-
-const typeConfig = {
-  verify: { color: 'text-emerald-500 bg-emerald-50 border-emerald-200', dot: 'bg-emerald-400' },
-  report: { color: 'text-rose-500 bg-rose-50 border-rose-200', dot: 'bg-rose-400' },
-  course: { color: 'text-[#4F7DF6] bg-blue-50 border-blue-200', dot: 'bg-[#4F7DF6]' },
-  cert: { color: 'text-amber-600 bg-amber-50 border-amber-200', dot: 'bg-amber-400' },
-  community: { color: 'text-[#8B5CF6] bg-purple-50 border-purple-200', dot: 'bg-purple-400' },
-};
+import { apiGet, apiDelete } from '../../config/api';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AdminDashboard() {
-  const [toggles, setToggles] = useState({
-    aiTutor: true,
-    maintenance: false,
-    newRegistrations: true,
-    communityCreation: true,
-    notebookHub: true,
+  const { setActiveTab } = useAuth();
+  const navigate = useNavigate();
+
+  const handleNav = (tabId, path) => {
+    if (setActiveTab) setActiveTab(tabId);
+    if (path) navigate(path);
+  };
+
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalFaculty: 0,
+    totalCommunities: 0,
+    totalCourses: 0,
   });
+  const [loading, setLoading] = useState(true);
+  const [purging, setPurging] = useState(false);
+  const [purgeMsg, setPurgeMsg] = useState('');
 
-  const flip = (key) => setToggles(prev => ({ ...prev, [key]: !prev[key] }));
+  const fetchStats = async () => {
+    setLoading(true);
+    try {
+      const data = await apiGet('/admin/stats');
+      if (data && data.success && data.stats) {
+        setStats(data.stats);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch admin stats, using live fallback:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const TOGGLES = [
-    { key: 'aiTutor', label: 'AI Tutor', desc: 'Enable the StudyVerse AI chat assistant for all students' },
-    { key: 'maintenance', label: 'Maintenance Mode', desc: 'Take the platform offline for maintenance' },
-    { key: 'newRegistrations', label: 'New Registrations', desc: 'Allow new students and tutors to sign up' },
-    { key: 'communityCreation', label: 'Community Creation', desc: 'Allow students to create new study communities' },
-    { key: 'notebookHub', label: 'Notebook Upload Hub', desc: 'Enable handwritten notebook uploads in Explore' },
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const handleFacultyPurge = async () => {
+    if (!window.confirm('Are you sure you want to remove ALL faculty accounts from the database? Users with @faculty.studyverse.com can re-register.')) {
+      return;
+    }
+    setPurging(true);
+    setPurgeMsg('');
+    try {
+      const data = await apiDelete('/admin/faculty-cleanup');
+      setPurgeMsg(data.message || 'Faculty accounts purged successfully.');
+      fetchStats();
+    } catch (err) {
+      setPurgeMsg('Cleanup failed: ' + err.message);
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  // Platform Suggestions generated for Admin
+  const SUGGESTIONS = [
+    {
+      id: 1,
+      title: 'Enforce @faculty.studyverse.com Validation',
+      desc: 'All faculty accounts now require official domain validation. Review non-compliant legacy accounts.',
+      type: 'security',
+      action: 'Check Faculty List',
+      tab: 'admin-faculty',
+      path: '/admin/faculty',
+    },
+    {
+      id: 2,
+      title: 'Separate User & Faculty Database Fields',
+      desc: 'Student users and verified Faculty members are isolated into distinct management collections.',
+      type: 'architecture',
+      action: 'Manage Students',
+      tab: 'admin-users',
+      path: '/admin/users',
+    },
+    {
+      id: 3,
+      title: 'Automate Weekly Content Moderation',
+      desc: 'Review flagged community posts and handwritten notes awaiting verification.',
+      type: 'moderation',
+      action: 'Review Reports',
+      tab: 'admin-reports',
+      path: '/admin/reports',
+    },
+    {
+      id: 4,
+      title: 'Verify Pending Faculty Applications',
+      desc: 'Educators applied for verified tutor badges this week. Approval boosts student trust.',
+      type: 'growth',
+      action: 'View Applications',
+      tab: 'admin-verifications',
+      path: '/admin/verifications',
+    },
   ];
 
   return (
-    <AppLayout>
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 pb-24 md:pb-8">
+    <AdminLayout>
+      <div className="max-w-7xl mx-auto space-y-8 pb-12">
+        {/* Cyber Banner Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-[#0F2032]/90 via-[#0B1726]/90 to-[#07111D]/90 p-6 sm:p-7 rounded-3xl border border-[#1E293B] backdrop-blur-2xl shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[14px] bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-            <Shield className="w-5 h-5 text-white" strokeWidth={2} />
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 p-0.5 shadow-lg shadow-emerald-500/20">
+              <div className="w-full h-full bg-[#0B1522] rounded-[14px] flex items-center justify-center text-emerald-400">
+                <Shield className="w-7 h-7" strokeWidth={2} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Cyber Command Panel
+                </span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-white mt-1 tracking-tight">Platform Intelligence &amp; Control</h1>
+            </div>
           </div>
-          <div>
-            <span className="px-2.5 py-0.5 rounded-full bg-slate-900 text-slate-200 text-[11px] font-extrabold mb-1 inline-block">
-              🛡️ Admin Control Center
-            </span>
-            <h1 className="text-2xl font-extrabold text-[#1E293B]">Platform Overview</h1>
+
+          <div className="flex items-center gap-2.5 relative z-10">
+            <button
+              onClick={fetchStats}
+              className="px-4 py-2.5 rounded-xl bg-[#132235] hover:bg-[#1C2F47] border border-[#1E293B] text-slate-200 text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer shadow-md"
+            >
+              <RefreshCw className={`w-4 h-4 text-emerald-400 ${loading ? 'animate-spin' : ''}`} /> Refresh Data
+            </button>
+            <button
+              onClick={handleFacultyPurge}
+              disabled={purging}
+              className="px-4 py-2.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 text-rose-300 text-xs font-black flex items-center gap-2 transition-all cursor-pointer shadow-md"
+            >
+              <Trash2 className="w-4 h-4 text-rose-400" /> {purging ? 'Purging...' : 'Purge DB Faculty'}
+            </button>
           </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {purgeMsg && (
+          <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-800/60 text-emerald-200 text-xs font-bold flex items-center justify-between shadow-lg">
+            <span>{purgeMsg}</span>
+            <button onClick={() => setPurgeMsg('')} className="text-emerald-400 hover:text-white font-bold">✕</button>
+          </div>
+        )}
+
+        {/* Real KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Daily Active Users', value: '2,847', delta: '↑ +12% today', icon: Activity, color: 'text-[#4F7DF6]', bg: 'bg-[#EEF4FF]' },
-            { label: 'Total Tutors', value: '38', delta: '4 pending verification', icon: Users, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-            { label: 'Pending Reports', value: '9', delta: '2 high priority', icon: Flag, color: 'text-rose-500', bg: 'bg-rose-50' },
-            { label: 'Courses Published', value: '124', delta: '↑ 6 this week', icon: BookOpen, color: 'text-amber-500', bg: 'bg-amber-50' },
-          ].map(s => (
-            <div key={s.label} className="p-4 bg-white rounded-[18px] border border-[#E2E8F0]">
-              <div className={`w-8 h-8 rounded-[10px] ${s.bg} flex items-center justify-center mb-3`}>
-                <s.icon className={`w-4 h-4 ${s.color}`} />
+            {
+              label: 'Total Student Users',
+              value: loading ? '...' : stats.totalUsers,
+              sub: 'Isolated Student Database Field',
+              icon: Users,
+              color: 'text-emerald-400',
+              borderColor: 'border-emerald-500/30',
+              glowColor: 'shadow-emerald-500/10',
+              bg: 'bg-gradient-to-b from-emerald-950/30 to-[#0B1522]',
+              tab: 'admin-users',
+              path: '/admin/users',
+            },
+            {
+              label: 'Total Faculty & Tutors',
+              value: loading ? '...' : stats.totalFaculty,
+              sub: '@faculty.studyverse.com Field',
+              icon: GraduationCap,
+              color: 'text-teal-400',
+              borderColor: 'border-teal-500/30',
+              glowColor: 'shadow-teal-500/10',
+              bg: 'bg-gradient-to-b from-teal-950/30 to-[#0B1522]',
+              tab: 'admin-faculty',
+              path: '/admin/faculty',
+            },
+            {
+              label: 'Study Communities',
+              value: loading ? '...' : stats.totalCommunities,
+              sub: 'Active Collaborative Hubs',
+              icon: MessageSquare,
+              color: 'text-cyan-400',
+              borderColor: 'border-cyan-500/30',
+              glowColor: 'shadow-cyan-500/10',
+              bg: 'bg-gradient-to-b from-cyan-950/30 to-[#0B1522]',
+              tab: 'admin-dashboard',
+              path: '/admin/dashboard',
+            },
+            {
+              label: 'Published Courses',
+              value: loading ? '...' : stats.totalCourses,
+              sub: 'Educator Verified Modules',
+              icon: BookOpen,
+              color: 'text-emerald-300',
+              borderColor: 'border-emerald-400/30',
+              glowColor: 'shadow-emerald-400/10',
+              bg: 'bg-gradient-to-b from-emerald-900/20 to-[#0B1522]',
+              tab: 'admin-dashboard',
+              path: '/admin/dashboard',
+            },
+          ].map((s) => (
+            <div
+              key={s.label}
+              onClick={() => handleNav(s.tab, s.path)}
+              className={`p-5 rounded-2xl border ${s.borderColor} ${s.bg} hover:scale-[1.02] transition-all duration-200 cursor-pointer group shadow-xl ${s.glowColor}`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-[#09121F] border border-[#1E293B] flex items-center justify-center">
+                  <s.icon className={`w-5 h-5 ${s.color}`} />
+                </div>
+                <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
               </div>
-              <p className="text-xl font-extrabold text-[#1E293B]">{s.value}</p>
-              <p className="text-xs text-[#64748B] font-semibold">{s.label}</p>
-              <p className="text-[11px] text-[#94A3B8] mt-0.5">{s.delta}</p>
+              <p className="text-3xl font-black text-white">{s.value}</p>
+              <p className="text-xs font-extrabold text-slate-200 mt-1.5">{s.label}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">{s.sub}</p>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Feature Toggles */}
-          <div className="bg-white p-5 rounded-[20px] border border-[#E2E8F0]">
-            <h2 className="text-sm font-extrabold text-[#1E293B] flex items-center gap-2 mb-5">
-              <Zap className="w-4 h-4 text-amber-500" />
-              Platform Feature Toggles
-            </h2>
-            <div className="space-y-3">
-              {TOGGLES.map(t => (
-                <div key={t.key} className="flex items-start justify-between gap-4 p-3 rounded-[14px] bg-[#F8FAFC] border border-[#E2E8F0] hover:border-[#CBD5E1] transition-all">
-                  <div>
-                    <p className="text-xs font-bold text-[#1E293B]">{t.label}</p>
-                    <p className="text-[11px] text-[#94A3B8] mt-0.5">{t.desc}</p>
-                  </div>
-                  <button
-                    onClick={() => flip(t.key)}
-                    className={`shrink-0 transition-colors cursor-pointer ${toggles[t.key] ? 'text-emerald-500' : 'text-slate-300'}`}
-                  >
-                    {toggles[t.key]
-                      ? <ToggleRight className="w-7 h-7" strokeWidth={1.5} />
-                      : <ToggleLeft className="w-7 h-7" strokeWidth={1.5} />}
-                  </button>
-                </div>
-              ))}
+        {/* Dedicated Separate Field Buttons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-emerald-950/50 via-[#0C1A29] to-[#07121E] border border-emerald-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl relative overflow-hidden group">
+            <div className="space-y-1.5 relative z-10">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider">
+                Isolated Field
+              </span>
+              <h3 className="text-xl font-black text-white tracking-tight">Student Users Directory</h3>
+              <p className="text-xs text-slate-300 max-w-sm">Manage student accounts, progress tracking, and permissions in a separate field.</p>
+            </div>
+            <button
+              onClick={() => handleNav('admin-users', '/admin/users')}
+              className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer shrink-0 relative z-10"
+            >
+              Open Users Directory <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-teal-950/50 via-[#0C1A29] to-[#07121E] border border-teal-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl relative overflow-hidden group">
+            <div className="space-y-1.5 relative z-10">
+              <span className="px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-400/30 text-[10px] font-black uppercase tracking-wider">
+                Isolated Field
+              </span>
+              <h3 className="text-xl font-black text-white tracking-tight">Faculty &amp; Educator Portal</h3>
+              <p className="text-xs text-slate-300 max-w-sm">Manage verified @faculty.studyverse.com educators separately from students.</p>
+            </div>
+            <button
+              onClick={() => handleNav('admin-faculty', '/admin/faculty')}
+              className="px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white text-xs font-black flex items-center gap-2 shadow-lg shadow-teal-600/30 transition-all cursor-pointer shrink-0 relative z-10"
+            >
+              Open Faculty Directory <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Suggestions & Action Plan */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-[#0B1522]/90 border border-[#1E293B] space-y-6 shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <Lightbulb className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black text-white tracking-tight">System Suggestions &amp; Recommendations</h2>
+              <p className="text-xs text-slate-400">Actionable insights generated for system integrity and educator onboarding</p>
             </div>
           </div>
 
-          {/* Recent Platform Activity */}
-          <div className="bg-white p-5 rounded-[20px] border border-[#E2E8F0]">
-            <h2 className="text-sm font-extrabold text-[#1E293B] flex items-center gap-2 mb-5">
-              <Bell className="w-4 h-4 text-[#8B5CF6]" />
-              Recent Platform Activity
-            </h2>
-            <div className="space-y-2.5">
-              {MOCK_ACTIVITY.map(a => {
-                const cfg = typeConfig[a.type];
-                return (
-                  <div key={a.id} className="flex items-start gap-3 p-3 rounded-[14px] bg-[#F8FAFC] border border-[#E2E8F0]">
-                    <div className={`w-2 h-2 rounded-full ${cfg.dot} mt-1.5 shrink-0`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-[#1E293B] font-semibold leading-snug">{a.action}</p>
-                      <p className="text-[10px] text-[#94A3B8] mt-0.5">{a.time}</p>
-                    </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {SUGGESTIONS.map((item) => (
+              <div
+                key={item.id}
+                className="p-5 rounded-2xl bg-[#07111D] border border-[#1E293B] hover:border-emerald-500/40 transition-all duration-200 flex flex-col justify-between space-y-3 group shadow-lg"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-black text-white group-hover:text-emerald-300 transition-colors">{item.title}</h4>
+                    <span className="text-[9px] font-black px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/60 uppercase tracking-wide">
+                      {item.type}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
+                </div>
+                <button
+                  onClick={() => handleNav(item.tab, item.path)}
+                  className="self-start text-xs font-extrabold text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 cursor-pointer pt-1 transition-colors"
+                >
+                  {item.action} <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </div>
-    </AppLayout>
+    </AdminLayout>
   );
 }

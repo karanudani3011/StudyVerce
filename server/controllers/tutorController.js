@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken';
 import Tutor from '../models/Tutor.js';
 import User from '../models/User.js';
+import TutorApplication from '../models/TutorApplication.js';
 
 // Helper to generate JWT Token
 const generateToken = (id) => {
-  return jwt.sign({ id, isTutor: true }, process.env.JWT_SECRET, {
+  return jwt.sign({ id, isTutor: true }, process.env.JWT_SECRET || 'secret123', {
     expiresIn: process.env.JWT_EXPIRE || '30d',
   });
 };
@@ -20,7 +21,16 @@ export const registerTutor = async (req, res) => {
       return res.status(400).json({ message: 'Please provide name, email, and password.' });
     }
 
-    const tutorExists = await Tutor.findOne({ email: email.toLowerCase() });
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Email validation for Tutor & Faculty accounts
+    if (!cleanEmail.endsWith('@faculty.studyverse.com')) {
+      return res.status(400).json({
+        message: 'Tutor & Faculty accounts must use an official @faculty.studyverse.com email address.',
+      });
+    }
+
+    const tutorExists = await Tutor.findOne({ email: cleanEmail });
     if (tutorExists) {
       return res.status(400).json({ message: 'A Tutor/Faculty account with this email already exists.' });
     }
@@ -29,13 +39,13 @@ export const registerTutor = async (req, res) => {
 
     const tutor = await Tutor.create({
       name,
-      email: email.toLowerCase(),
+      email: cleanEmail,
       password,
       username,
       institution: institution || 'Stanford University',
       department: department || 'Computer Science & AI',
       title: title || 'Faculty / Lead Instructor',
-      role: role === 'faculty' ? 'faculty' : 'tutor',
+      role: role || 'faculty',
       isVerified: true,
     });
 
@@ -82,10 +92,18 @@ export const loginTutor = async (req, res) => {
       return res.status(400).json({ message: 'Please provide email and password.' });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     // Try finding in Tutor collection first
-    const tutor = await Tutor.findOne({ email: email.toLowerCase() }).select('+password');
+    const tutor = await Tutor.findOne({ email: cleanEmail }).select('+password');
 
     if (tutor && (await tutor.matchPassword(password))) {
+      if (!cleanEmail.endsWith('@faculty.studyverse.com')) {
+        return res.status(403).json({
+          message: 'Tutor & Faculty accounts must use an official @faculty.studyverse.com email address.',
+        });
+      }
+
       const token = generateToken(tutor._id);
       return res.json({
         success: true,
@@ -110,10 +128,16 @@ export const loginTutor = async (req, res) => {
       });
     }
 
-    // If not found in Tutor collection, check User collection if role is tutor/faculty
-    const user = await User.findOne({ email: email.toLowerCase(), role: { $in: ['tutor', 'faculty'] } }).select('+password');
+    // Check User collection if role is tutor/faculty
+    const user = await User.findOne({ email: cleanEmail, role: { $in: ['tutor', 'faculty'] } }).select('+password');
     if (user && (await user.matchPassword(password))) {
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+      if (user.role === 'faculty' && !user.email.endsWith('@faculty.studyverse.com')) {
+        return res.status(403).json({
+          message: 'Faculty accounts must use an official @faculty.studyverse.com email address.',
+        });
+      }
+
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret123', { expiresIn: '30d' });
       return res.json({
         success: true,
         token,
@@ -133,7 +157,7 @@ export const loginTutor = async (req, res) => {
       });
     }
 
-    return res.status(401).json({ message: 'Invalid Tutor credentials or account not found in Tutor database.' });
+    return res.status(401).json({ message: 'Invalid Tutor/Faculty credentials or account not found.' });
   } catch (error) {
     console.error('Tutor Login Error:', error);
     return res.status(500).json({ message: error.message || 'Server error during tutor login.' });
@@ -172,5 +196,61 @@ export const getTutorProfile = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: error.message || 'Server error fetching tutor profile.' });
+  }
+};
+
+// @desc    Submit Tutor / Faculty Application
+// @route   POST /api/tutors/apply
+// @access  Public / Private
+export const submitTutorApplication = async (req, res) => {
+  try {
+    const { fullName, email, institution, department, title, subject, teachingExp, credentialsUrl, bio, userId } = req.body;
+
+    if (!fullName || !email || !institution || !subject || !credentialsUrl || !bio) {
+      return res.status(400).json({ message: 'Please complete all required application fields.' });
+    }
+
+    const application = await TutorApplication.create({
+      user: userId || null,
+      fullName: fullName.trim(),
+      email: email.trim().toLowerCase(),
+      institution: institution.trim(),
+      department: department ? department.trim() : '',
+      title: title ? title.trim() : '',
+      subject: subject.trim(),
+      teachingExp: teachingExp || '0',
+      credentialsUrl: credentialsUrl.trim(),
+      bio: bio.trim(),
+      status: 'pending',
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Application submitted successfully.',
+      application,
+    });
+  } catch (error) {
+    console.error('Submit Application Error:', error);
+    return res.status(500).json({ message: error.message || 'Server error submitting application.' });
+  }
+};
+
+// @desc    Get current user's tutor application status
+// @route   GET /api/tutors/my-application
+// @access  Public / Private
+export const getMyTutorApplication = async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) {
+      return res.status(400).json({ message: 'Email required to query application.' });
+    }
+
+    const application = await TutorApplication.findOne({ email: email.trim().toLowerCase() }).sort({ createdAt: -1 });
+    return res.json({
+      success: true,
+      application: application || null,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || 'Server error fetching application.' });
   }
 };

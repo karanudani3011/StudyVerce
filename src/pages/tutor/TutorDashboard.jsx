@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import {
   GraduationCap, BookOpen, Star, Users, TrendingUp,
   Plus, Award, BarChart3, MessageSquare, Edit3, Trash2,
   Sparkles, Clock, CheckCircle2, ChevronRight, Video,
   Calendar, FileText, Download, ShieldCheck, Zap, Send,
-  Share2, ArrowUpRight, Check, Eye, HelpCircle, Flame
+  Share2, ArrowUpRight, Check, Eye, HelpCircle, Flame,
+  Flag, XCircle, RefreshCw, AlertCircle, BadgeCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CourseUploadModal } from '../../components/courses/CourseUploadModal';
 import { UploadNotebookModal } from '../../components/explore/UploadNotebookModal';
+import ReportContentModal from '../../components/modals/ReportContentModal';
 import { MOCK_COURSES } from '../../data/mockData';
+import { apiGet } from '../../config/api';
 import confetti from 'canvas-confetti';
 
 const MOCK_TEACHING_NOTES = [
@@ -33,9 +36,21 @@ const MOCK_LIVE_SESSIONS = [
 
 export default function TutorDashboard() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview'); // overview, courses, notes, qa, live
+  const [activeTab, setActiveTab] = useState('overview'); // overview, courses, notes, qa, live, application
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [myApplication, setMyApplication] = useState(null);
+  const [appLoading, setAppLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    setAppLoading(true);
+    apiGet(`/tutors/my-application?email=${encodeURIComponent(user.email)}`)
+      .then(data => setMyApplication(data.application || null))
+      .catch(() => {})
+      .finally(() => setAppLoading(false));
+  }, [user?.email]);
 
   // Dynamic Course State
   const [courses, setCourses] = useState(
@@ -142,6 +157,13 @@ export default function TutorDashboard() {
                 <FileText className="w-4 h-4" />
                 Publish Notes
               </button>
+              <button
+                onClick={() => setIsReportModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-rose-900/40 hover:bg-rose-800/60 text-rose-300 text-xs font-extrabold border border-rose-700/50 transition-all cursor-pointer"
+              >
+                <Flag className="w-4 h-4" />
+                Flag Content
+              </button>
             </div>
           </div>
 
@@ -174,6 +196,7 @@ export default function TutorDashboard() {
             { id: 'notes', label: '📝 Teaching Notes & Vault', badge: notes.length },
             { id: 'qa', label: '💬 Student Q&A Desk', badge: questions.filter(q => q.status === 'pending').length },
             { id: 'live', label: '🗓️ Live Office Hours', badge: MOCK_LIVE_SESSIONS.length },
+            { id: 'application', label: '🎓 My Application', badge: myApplication?.status === 'pending' ? '⏳' : null },
           ].map(tab => (
             <button
               key={tab.id}
@@ -493,6 +516,80 @@ export default function TutorDashboard() {
           </div>
         )}
 
+        {/* ─── TAB 6: APPLICATION STATUS ─────────────────────────────────── */}
+        {activeTab === 'application' && (
+          <div className="max-w-2xl mx-auto space-y-6">
+            <div>
+              <h2 className="text-lg font-extrabold text-[#1E293B]">Tutor Application Status</h2>
+              <p className="text-xs text-[#64748B] mt-1">Track the status of your tutor verification application</p>
+            </div>
+
+            {appLoading && (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="w-5 h-5 text-[#4F7DF6] animate-spin mr-2" />
+                <span className="text-sm text-[#64748B]">Checking status...</span>
+              </div>
+            )}
+
+            {!appLoading && !myApplication && (
+              <div className="text-center py-12 space-y-4">
+                <div className="w-16 h-16 rounded-[20px] bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto">
+                  <GraduationCap className="w-8 h-8 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-[#1E293B]">No Application Found</h3>
+                  <p className="text-sm text-[#64748B] mt-1">You haven't submitted a tutor application yet.</p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('apply-tutor')}
+                  className="px-6 py-3 rounded-[14px] bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-extrabold shadow-lg shadow-amber-200 cursor-pointer inline-flex items-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" /> Apply to Become a Tutor
+                </button>
+              </div>
+            )}
+
+            {!appLoading && myApplication && (() => {
+              const statusMap = {
+                pending:  { icon: <Clock className="w-6 h-6 text-amber-500" />,    bg: 'bg-amber-50 border-amber-200',    badge: 'text-amber-700 bg-amber-100 border-amber-300',   label: '⏳ Under Review',    title: 'Application Under Review',    desc: 'Your application is being reviewed by our admin team. We will get back to you within 2–3 business days.' },
+                approved: { icon: <BadgeCheck className="w-6 h-6 text-emerald-500" />, bg: 'bg-emerald-50 border-emerald-200', badge: 'text-emerald-700 bg-emerald-100 border-emerald-300', label: '✅ Approved',       title: 'Application Approved! 🎉',   desc: 'Congratulations! You are now a verified tutor on StudyVerse. Log out and log back in using Faculty credentials.' },
+                rejected: { icon: <XCircle className="w-6 h-6 text-rose-500" />,    bg: 'bg-rose-50 border-rose-200',      badge: 'text-rose-700 bg-rose-100 border-rose-300',     label: '❌ Not Approved', title: 'Application Not Approved', desc: myApplication.rejectionReason ? `Reason: ${myApplication.rejectionReason}` : 'Unfortunately your application was not approved. You may reapply with updated credentials.' },
+              };
+              const cfg = statusMap[myApplication.status] || statusMap.pending;
+              return (
+                <div className={`rounded-[24px] border p-6 ${cfg.bg}`}>
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 rounded-[14px] bg-white/70 border border-white shadow-sm shrink-0">{cfg.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 flex-wrap mb-2">
+                        <h3 className="text-base font-extrabold text-[#1E293B]">{cfg.title}</h3>
+                        <span className={`px-3 py-0.5 rounded-full text-xs font-extrabold border ${cfg.badge}`}>{cfg.label}</span>
+                      </div>
+                      <p className="text-sm text-[#64748B] leading-relaxed">{cfg.desc}</p>
+
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                        {[['Name', myApplication.fullName], ['Subject', myApplication.subject], ['Institution', myApplication.institution], ['Applied', new Date(myApplication.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })]].map(([k, v]) => (
+                          <div key={k} className="p-2 rounded-[10px] bg-white/60 border border-white/80">
+                            <p className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider">{k}</p>
+                            <p className="font-extrabold text-[#1E293B] mt-0.5">{v}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => { setAppLoading(true); apiGet(`/tutors/my-application?email=${encodeURIComponent(user?.email)}`).then(d => setMyApplication(d.application)).catch(() => {}).finally(() => setAppLoading(false)); }}
+                        className="mt-4 flex items-center gap-1.5 text-xs font-bold text-[#64748B] hover:text-[#1E293B] cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" /> Refresh Status
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
       </div>
 
       {/* Course Upload Modal */}
@@ -509,6 +606,14 @@ export default function TutorDashboard() {
         onClose={() => setIsNoteModalOpen(false)}
         onNotebookUploaded={handleNoteUploaded}
         currentUser={user}
+      />
+
+      {/* Report Content Modal */}
+      <ReportContentModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        contentType="post"
+        contentPreview="Flagged from Tutor Dashboard"
       />
     </AppLayout>
   );

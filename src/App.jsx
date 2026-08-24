@@ -21,6 +21,9 @@ import { RoleProtectedRoute } from './components/auth/RoleProtectedRoute';
 import TutorDashboard from './pages/tutor/TutorDashboard';
 import TutorAnalytics from './pages/tutor/TutorAnalytics';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminFacultyPage from './pages/admin/AdminFacultyPage';
 import AdminVerifications from './pages/admin/AdminVerifications';
 import AdminReports from './pages/admin/AdminReports';
 import ApplyTutorPage from './pages/apply-tutor/ApplyTutorPage';
@@ -38,6 +41,8 @@ const MainAppRouter = () => {
       case 'otp':
       case 'reset-password':
         return <AuthPages />;
+      case 'admin-login':
+        return <AdminLoginPage />;
       case 'dashboard':
         return <DashboardPage />;
       case 'feed':
@@ -78,19 +83,31 @@ const MainAppRouter = () => {
       // Admin Protected Routes
       case 'admin-dashboard':
         return (
-          <RoleProtectedRoute allowedRoles={['admin']} fallback={<DashboardPage />}>
+          <RoleProtectedRoute allowedRoles={['admin']} fallback={<AdminLoginPage />}>
             <AdminDashboard />
+          </RoleProtectedRoute>
+        );
+      case 'admin-users':
+        return (
+          <RoleProtectedRoute allowedRoles={['admin']} fallback={<AdminLoginPage />}>
+            <AdminUsersPage />
+          </RoleProtectedRoute>
+        );
+      case 'admin-faculty':
+        return (
+          <RoleProtectedRoute allowedRoles={['admin']} fallback={<AdminLoginPage />}>
+            <AdminFacultyPage />
           </RoleProtectedRoute>
         );
       case 'admin-verifications':
         return (
-          <RoleProtectedRoute allowedRoles={['admin']} fallback={<DashboardPage />}>
+          <RoleProtectedRoute allowedRoles={['admin']} fallback={<AdminLoginPage />}>
             <AdminVerifications />
           </RoleProtectedRoute>
         );
       case 'admin-reports':
         return (
-          <RoleProtectedRoute allowedRoles={['admin']} fallback={<DashboardPage />}>
+          <RoleProtectedRoute allowedRoles={['admin']} fallback={<AdminLoginPage />}>
             <AdminReports />
           </RoleProtectedRoute>
         );
@@ -104,10 +121,12 @@ const MainAppRouter = () => {
     }
   };
 
+  const isAdminTab = activeTab.startsWith('admin-');
+
   return (
     <div className="relative min-h-screen font-sans selection:bg-[#4F7DF6] selection:text-white">
       {renderView()}
-      <MobileBottomNav />
+      {!isAdminTab && <MobileBottomNav />}
     </div>
   );
 };

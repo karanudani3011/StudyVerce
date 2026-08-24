@@ -54,6 +54,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (accountType === 'tutor' && !form.email.trim().toLowerCase().endsWith('@faculty.studyverse.com')) {
+      setError('Tutor / Faculty accounts must use an official @faculty.studyverse.com email address.');
+      return;
+    }
+
     setLoading(true);
     try {
       if (accountType === 'tutor') {
@@ -160,12 +165,18 @@ export default function RegisterPage() {
             label="Email"
             name="email"
             type="email"
-            placeholder={accountType === 'tutor' ? 'sarah.chen@mit.edu' : 'alex@stanford.edu'}
+            placeholder={accountType === 'tutor' ? 'dr.sarah@faculty.studyverse.com' : 'alex@stanford.edu'}
             icon={Mail}
             value={form.email}
             onChange={handleChange}
             required
           />
+
+          {accountType === 'tutor' && (
+            <p className="-mt-1 text-[11px] font-bold text-amber-600 flex items-center gap-1">
+              <span>⚠️ Must use an official <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">@faculty.studyverse.com</code> email address</span>
+            </p>
+          )}
 
           {accountType === 'tutor' && (
             <>

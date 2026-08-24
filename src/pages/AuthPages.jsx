@@ -62,11 +62,21 @@ export const AuthPages = () => {
   const [newPassword, setNewPassword]           = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [rememberMe, setRememberMe]       = useState(false);
 
   // UI state
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [success, setSuccess]   = useState('');
+
+  // Load remembered email on mount
+  React.useEffect(() => {
+    const savedEmail = localStorage.getItem('sv_remember_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const strength = getPasswordStrength(password);
 
@@ -100,6 +110,13 @@ export const AuthPages = () => {
     setLoading(true);
     try {
       await login({ email, password });
+
+      if (rememberMe) {
+        localStorage.setItem('sv_remember_email', email.trim());
+      } else {
+        localStorage.removeItem('sv_remember_email');
+      }
+
       setActiveTab('dashboard');
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
@@ -116,13 +133,23 @@ export const AuthPages = () => {
     if (password !== confirmPass) { setError('Passwords do not match.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     if (!termsAccepted) { setError('Please accept the Terms of Service to continue.'); return; }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (accountType === 'faculty' || cleanEmail.endsWith('@faculty.studyverse.com')) {
+      if (!cleanEmail.endsWith('@faculty.studyverse.com')) {
+        setError('Faculty accounts MUST use an official @faculty.studyverse.com email address.');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      if (accountType === 'tutor') {
-        await registerTutor({ name, email, password, role: 'tutor' });
+      if (accountType === 'tutor' || accountType === 'faculty') {
+        await registerTutor({ name, email: cleanEmail, password, role: accountType === 'faculty' ? 'faculty' : 'tutor' });
         setActiveTab('tutor-dashboard');
       } else {
-        await register({ name, email, password, role: 'student' });
+        await register({ name, email: cleanEmail, password, role: 'student' });
         setActiveTab('dashboard');
       }
     } catch (err) {
@@ -265,10 +292,25 @@ export const AuthPages = () => {
                   <Input label="Email Address" type="email" placeholder="alex@stanford.edu" icon={Mail} value={email} onChange={(e) => setEmail(e.target.value)} required />
                   <div>
                     <Input label="Password" type="password" placeholder="••••••••" icon={Lock} value={password} onChange={(e) => setPassword(e.target.value)} required />
-                    <div className="flex justify-end mt-1.5">
-                      <button type="button" onClick={() => handleTabChange('forgot-password')} className="text-xs font-semibold text-[#4F7DF6] hover:underline">
-                        Forgot password?
-                      </button>
+                    <div className="flex items-center justify-between mt-2">
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded border-[#CBD5E1] text-[#4F7DF6] focus:ring-[#4F7DF6]/20 transition cursor-pointer"
+                        />
+                        <span className="text-xs text-[#64748B] font-medium">Remember Me</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => handleTabChange('admin-login')} className="text-xs font-semibold text-slate-500 hover:text-indigo-600 flex items-center gap-1">
+                          🛡️ Admin Login
+                        </button>
+                        <span className="text-slate-300">•</span>
+                        <button type="button" onClick={() => handleTabChange('forgot-password')} className="text-xs font-semibold text-[#4F7DF6] hover:underline">
+                          Forgot password?
+                        </button>
+                      </div>
                     </div>
                   </div>
                   <Button type="submit" variant="primary" size="lg" fullWidth icon={loading ? Loader2 : ArrowRight} disabled={loading}>
@@ -297,11 +339,11 @@ export const AuthPages = () => {
                   <ErrorAlert message={error} />
 
                   {/* Account Type Selector */}
-                  <div className="grid grid-cols-2 gap-2 p-1 bg-[#F1F5F9] rounded-[14px]">
+                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#F1F5F9] rounded-[14px]">
                     <button
                       type="button"
                       onClick={() => setAccountType('student')}
-                      className={`py-2 px-3 rounded-[10px] text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      className={`py-2 px-2 rounded-[10px] text-[11px] font-extrabold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                         accountType === 'student'
                           ? 'bg-white text-[#4F7DF6] shadow-sm'
                           : 'text-[#64748B] hover:text-[#1E293B]'

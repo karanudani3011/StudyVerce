@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ToastProvider } from '../context/ToastContext';
 import { CommunityProvider } from '../context/CommunityContext';
@@ -61,6 +61,12 @@ const PaymentPage       = lazy(() => import('../pages/premium/PaymentPage'));
 const PaymentSuccess    = lazy(() => import('../pages/premium/PaymentSuccess'));
 const NotFound          = lazy(() => import('../pages/misc/NotFound'));
 const Maintenance       = lazy(() => import('../pages/misc/Maintenance'));
+const AdminLoginPage    = lazy(() => import('../pages/admin/AdminLoginPage'));
+const AdminDashboard    = lazy(() => import('../pages/admin/AdminDashboard'));
+const AdminUsersPage    = lazy(() => import('../pages/admin/AdminUsersPage'));
+const AdminFacultyPage  = lazy(() => import('../pages/admin/AdminFacultyPage'));
+const AdminVerifications = lazy(() => import('../pages/admin/AdminVerifications'));
+const AdminReports      = lazy(() => import('../pages/admin/AdminReports'));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
@@ -93,6 +99,41 @@ const ProtectedRoute = () => {
   return <Outlet />;
 };
 
+// Admin-only Protected Route (redirects to /admin/login instead of /login)
+const AdminProtectedRoute = () => {
+  const { isAuthenticated, user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#060D17]">
+        <div className="flex flex-col items-center gap-3">
+          <Spinner size="lg" />
+          <p className="text-sm text-slate-400 font-medium">Verifying admin session...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || user?.role !== 'admin') {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  return <Outlet />;
+};
+
+// Wrapper that hides MobileBottomNav on admin pages
+const AppShell = () => {
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith('/admin');
+
+  return (
+    <>
+      <Outlet />
+      {!isAdminPage && <MobileBottomNav />}
+    </>
+  );
+};
+
 export const AppRouter = () => (
   <BrowserRouter>
     <AuthProvider>
@@ -100,71 +141,83 @@ export const AppRouter = () => (
         <CommunityProvider>
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              {/* Public */}
-              <Route path="/"                  element={<LandingPage />} />
-              <Route path="/login"             element={<LoginPage />} />
-              <Route path="/register"          element={<RegisterPage />} />
-              <Route path="/forgot-password"   element={<ForgotPassword />} />
-              <Route path="/otp"               element={<OTPVerify />} />
-              <Route path="/reset-password"    element={<ResetPassword />} />
-              <Route path="/about"             element={<AboutPage />} />
-              <Route path="/blog"              element={<BlogPage />} />
-              {/* <Route path="/careers"           element={<CareersPage />} /> */}
-              {/* <Route path="/press"             element={<PressPage />} /> */}
-              <Route path="/contact"           element={<ContactPage />} />
-              <Route path="/feedback"          element={<FeedbackPage />} />
-              <Route path="/help"              element={<HelpPage />} />
-              <Route path="/faq"               element={<FAQPage />} />
-              <Route path="/privacy"           element={<PrivacyPage />} />
-              <Route path="/terms"             element={<TermsPage />} />
-              <Route path="/security"          element={<SecurityPage />} />
-              <Route path="/cookies"           element={<CookiesPage />} />
-              <Route path="/premium"           element={<PremiumPage />} />
-              <Route path="/maintenance"       element={<Maintenance />} />
+              {/* All routes wrapped in AppShell for conditional nav */}
+              <Route element={<AppShell />}>
+                {/* Public */}
+                <Route path="/"                  element={<LandingPage />} />
+                <Route path="/login"             element={<LoginPage />} />
+                <Route path="/admin/login"       element={<AdminLoginPage />} />
+                <Route path="/admin"             element={<Navigate to="/admin/login" replace />} />
+                <Route path="/register"          element={<RegisterPage />} />
+                <Route path="/forgot-password"   element={<ForgotPassword />} />
+                <Route path="/otp"               element={<OTPVerify />} />
+                <Route path="/reset-password"    element={<ResetPassword />} />
+                <Route path="/about"             element={<AboutPage />} />
+                <Route path="/blog"              element={<BlogPage />} />
+                <Route path="/contact"           element={<ContactPage />} />
+                <Route path="/feedback"          element={<FeedbackPage />} />
+                <Route path="/help"              element={<HelpPage />} />
+                <Route path="/faq"               element={<FAQPage />} />
+                <Route path="/privacy"           element={<PrivacyPage />} />
+                <Route path="/terms"             element={<TermsPage />} />
+                <Route path="/security"          element={<SecurityPage />} />
+                <Route path="/cookies"           element={<CookiesPage />} />
+                <Route path="/premium"           element={<PremiumPage />} />
+                <Route path="/maintenance"       element={<Maintenance />} />
 
-              {/* Protected Application Routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/dashboard"         element={<DashboardPage />} />
-                <Route path="/feed"              element={<FeedPage />} />
-                <Route path="/feed/:postId"      element={<PostDetails />} />
-                <Route path="/reels"             element={<ReelsPage />} />
-                <Route path="/explore"           element={<ExplorePage />} />
-                <Route path="/search"            element={<SearchPage />} />
-                <Route path="/categories"        element={<CategoriesPage />} />
-                <Route path="/subjects"          element={<SubjectsPage />} />
-                <Route path="/communities"       element={<CommunitiesPage />} />
-                <Route path="/communities/:id"   element={<CommunityDetails />} />
-                <Route path="/ai-tutor"          element={<AITutorPage />} />
-                <Route path="/courses"           element={<CoursesPage />} />
-                <Route path="/courses/:id"       element={<CourseDetails />} />
-                <Route path="/my-learning"       element={<MyLearningPage />} />
-                <Route path="/upload/image"      element={<UploadImage />} />
-                <Route path="/upload/reel"       element={<UploadReel />} />
-                <Route path="/upload/pdf"        element={<UploadPDF />} />
-                <Route path="/upload/notes"      element={<UploadNotes />} />
-                <Route path="/upload/validate"   element={<AIValidation />} />
-                <Route path="/notifications"     element={<NotificationsPage />} />
-                <Route path="/messages"          element={<MessagesPage />} />
-                <Route path="/messages/:id"      element={<ChatPage />} />
-                <Route path="/profile"           element={<ProfilePage />} />
-                <Route path="/profile/edit"      element={<EditProfile />} />
-                <Route path="/saved"             element={<SavedPage />} />
-                <Route path="/bookmarks"         element={<BookmarksPage />} />
-                <Route path="/certificates"      element={<CertificatesPage />} />
-                <Route path="/leaderboard"       element={<LeaderboardPage />} />
-                <Route path="/achievements"      element={<AchievementsPage />} />
-                <Route path="/settings"          element={<SettingsPage />} />
-                <Route path="/subscription"      element={<SubscriptionPage />} />
-                <Route path="/payment"           element={<PaymentPage />} />
-                <Route path="/payment/success"   element={<PaymentSuccess />} />
+                {/* ─── Admin-only Routes ─── */}
+                <Route element={<AdminProtectedRoute />}>
+                  <Route path="/admin/dashboard"    element={<AdminDashboard />} />
+                  <Route path="/admin/users"        element={<AdminUsersPage />} />
+                  <Route path="/admin/faculty"      element={<AdminFacultyPage />} />
+                  <Route path="/admin/verifications" element={<AdminVerifications />} />
+                  <Route path="/admin/reports"      element={<AdminReports />} />
+                </Route>
+
+                {/* ─── General Protected Routes ─── */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/dashboard"         element={<DashboardPage />} />
+                  <Route path="/feed"              element={<FeedPage />} />
+                  <Route path="/feed/:postId"      element={<PostDetails />} />
+                  <Route path="/reels"             element={<ReelsPage />} />
+                  <Route path="/explore"           element={<ExplorePage />} />
+                  <Route path="/search"            element={<SearchPage />} />
+                  <Route path="/categories"        element={<CategoriesPage />} />
+                  <Route path="/subjects"          element={<SubjectsPage />} />
+                  <Route path="/communities"       element={<CommunitiesPage />} />
+                  <Route path="/communities/:id"   element={<CommunityDetails />} />
+                  <Route path="/ai-tutor"          element={<AITutorPage />} />
+                  <Route path="/courses"           element={<CoursesPage />} />
+                  <Route path="/courses/:id"       element={<CourseDetails />} />
+                  <Route path="/my-learning"       element={<MyLearningPage />} />
+                  <Route path="/upload/image"      element={<UploadImage />} />
+                  <Route path="/upload/reel"       element={<UploadReel />} />
+                  <Route path="/upload/pdf"        element={<UploadPDF />} />
+                  <Route path="/upload/notes"      element={<UploadNotes />} />
+                  <Route path="/upload/validate"   element={<AIValidation />} />
+                  <Route path="/notifications"     element={<NotificationsPage />} />
+                  <Route path="/messages"          element={<MessagesPage />} />
+                  <Route path="/messages/:id"      element={<ChatPage />} />
+                  <Route path="/profile"           element={<ProfilePage />} />
+                  <Route path="/profile/edit"      element={<EditProfile />} />
+                  <Route path="/saved"             element={<SavedPage />} />
+                  <Route path="/bookmarks"         element={<BookmarksPage />} />
+                  <Route path="/certificates"      element={<CertificatesPage />} />
+                  <Route path="/leaderboard"       element={<LeaderboardPage />} />
+                  <Route path="/achievements"      element={<AchievementsPage />} />
+                  <Route path="/settings"          element={<SettingsPage />} />
+                  <Route path="/subscription"      element={<SubscriptionPage />} />
+                  <Route path="/payment"           element={<PaymentPage />} />
+                  <Route path="/payment/success"   element={<PaymentSuccess />} />
+                </Route>
+
+                <Route path="*"                  element={<NotFound />} />
               </Route>
-
-              <Route path="*"                  element={<NotFound />} />
             </Routes>
-            <MobileBottomNav />
           </Suspense>
         </CommunityProvider>
       </ToastProvider>
     </AuthProvider>
   </BrowserRouter>
 );
+
