@@ -13,6 +13,9 @@ import {
   getAdminReports,
   updateReportStatus,
   deleteReportedContent,
+  getFacultyForAdminMessaging,
+  getAdminFacultyChatHistory,
+  sendAdminFacultyMessage,
 } from '../controllers/adminController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -29,11 +32,16 @@ router.delete('/faculty-cleanup', cleanupFacultyAccounts);
 
 // Tutor Applications Routes
 router.get('/applications', protect, getAdminApplications);
-router.patch('/applications/:id/status', protect, updateApplicationStatus);
+router.patch('/applications/:id/status', updateApplicationStatus);
 
 // Flagged Content Reports Routes
 router.get('/reports', protect, getAdminReports);
 router.patch('/reports/:id/dismiss', protect, updateReportStatus);
 router.delete('/reports/:id/content', protect, deleteReportedContent);
+
+// Admin to Faculty Messaging Routes (Students excluded!)
+router.get('/faculty-messages/list', protect, getFacultyForAdminMessaging);
+router.get('/faculty-messages/:facultyId', protect, getAdminFacultyChatHistory);
+router.post('/faculty-messages/send', protect, sendAdminFacultyMessage);
 
 export default router;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../../components/layout/AppLayout';
 import {
   GraduationCap, BookOpen, Star, Users, TrendingUp,
@@ -13,7 +14,7 @@ import { CourseUploadModal } from '../../components/courses/CourseUploadModal';
 import { UploadNotebookModal } from '../../components/explore/UploadNotebookModal';
 import ReportContentModal from '../../components/modals/ReportContentModal';
 import { MOCK_COURSES } from '../../data/mockData';
-import { apiGet } from '../../config/api';
+import { apiGet, apiDelete } from '../../config/api';
 import confetti from 'canvas-confetti';
 
 const MOCK_TEACHING_NOTES = [
@@ -35,6 +36,7 @@ const MOCK_LIVE_SESSIONS = [
 ];
 
 export default function TutorDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview'); // overview, courses, notes, qa, live, application
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -80,6 +82,16 @@ export default function TutorDashboard() {
       status: 'published',
     }, ...prev]);
     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+  };
+
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm('Are you sure you want to delete this course permanently?')) return;
+    try {
+      await apiDelete(`/courses/${courseId}`);
+    } catch (err) {
+      console.warn('API delete course warning:', err.message);
+    }
+    setCourses(prev => prev.filter(c => c.id !== courseId && c._id !== courseId));
   };
 
   const handleNoteUploaded = (newNote) => {
@@ -340,8 +352,12 @@ export default function TutorDashboard() {
                     <button className="px-3.5 py-2 rounded-xl bg-[#EEF4FF] text-[#4F7DF6] hover:bg-blue-100 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5">
                       <Edit3 className="w-3.5 h-3.5" /> Edit Curriculum
                     </button>
-                    <button className="px-3.5 py-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition-all cursor-pointer">
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button
+                      onClick={() => handleDeleteCourse(course.id || course._id)}
+                      className="px-3.5 py-2 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                      title="Delete Course"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
                     </button>
                   </div>
                 </div>
@@ -541,7 +557,7 @@ export default function TutorDashboard() {
                   <p className="text-sm text-[#64748B] mt-1">You haven't submitted a tutor application yet.</p>
                 </div>
                 <button
-                  onClick={() => setActiveTab('apply-tutor')}
+                  onClick={() => navigate('/apply-tutor')}
                   className="px-6 py-3 rounded-[14px] bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-extrabold shadow-lg shadow-amber-200 cursor-pointer inline-flex items-center gap-2"
                 >
                   <Sparkles className="w-4 h-4" /> Apply to Become a Tutor

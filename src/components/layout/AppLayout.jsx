@@ -5,7 +5,7 @@ import {
   Sparkles, Search, Bell, Menu, X, LayoutDashboard,
   Newspaper, Compass, Users, Bot, PlusCircle, Trophy,
   MessageSquare, User, Settings, LogOut, Flame, Zap,
-  BookOpen, ChevronDown, Filter, GraduationCap, BarChart3, Shield, CheckCircle2, Flag
+  BookOpen, ChevronDown, Filter, GraduationCap, BarChart3, Shield, CheckCircle2, Flag, FileText
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';

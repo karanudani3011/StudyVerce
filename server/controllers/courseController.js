@@ -84,3 +84,27 @@ export const getCourseById = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Delete a course (Faculty can delete their own courses, Admin can delete ANY course)
+// @route   DELETE /api/courses/:id
+// @access  Private (Faculty / Admin)
+export const deleteCourse = async (req, res) => {
+  try {
+    const courseId = req.params.id;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    await Course.findByIdAndDelete(courseId);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Course deleted successfully from platform.',
+    });
+  } catch (error) {
+    console.error('Delete Course Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error deleting course.' });
+  }
+};

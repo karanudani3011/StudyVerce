@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Star, Clock, Users, Heart, Search,
-  ChevronDown, Check, SlidersHorizontal, X, RotateCcw, Award, Plus
+  ChevronDown, Check, SlidersHorizontal, X, RotateCcw, Award, Plus, Trash2
 } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Badge } from '../../components/ui/index.jsx';
@@ -11,7 +11,7 @@ import { MOCK_COURSES } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { CourseUploadModal } from '../../components/courses/CourseUploadModal';
-import { apiGet } from '../../config/api';
+import { apiGet, apiDelete } from '../../config/api';
 
 // Custom Dropdown select component
 function CustomDropdown({ label, options, selectedValue, onChange, disabled, icon: Icon, placeholder }) {
@@ -147,6 +147,7 @@ export default function CoursesPage() {
             subcategory: c.subcategory,
             description: c.description,
             lectures: c.lectures,
+            tutorId: c.tutorId || c.instructorId,
           }));
           setCoursesList([...formatted, ...MOCK_COURSES]);
         }
@@ -177,10 +178,23 @@ export default function CoursesPage() {
       subcategory: newCourse.subcategory,
       description: newCourse.description,
       lectures: newCourse.lectures || [],
+      tutorId: user?._id || user?.id,
     };
 
     setCoursesList(prev => [formattedNewCourse, ...prev]);
     addToast('Course uploaded & published to course catalog! 🎉', 'success');
+  };
+
+  const handleDeleteCourse = async (courseId, e) => {
+    if (e) e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this course permanently?')) return;
+    try {
+      await apiDelete(`/courses/${courseId}`);
+    } catch (err) {
+      console.warn('API delete course warning:', err.message);
+    }
+    setCoursesList(prev => prev.filter(c => c.id !== courseId));
+    addToast('Course deleted 🗑️', 'success');
   };
 
   const isWishlisted = (courseId) => {
@@ -489,10 +503,31 @@ export default function CoursesPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {filteredCourses.map(course => (
-              <Card key={course.id} hover onClick={() => navigate(`/courses/${course.id}`)} className="space-y-4 relative group cursor-pointer">
-                <div className="relative overflow-hidden rounded-[14px]">
-                  <img src={course.image} alt="" className="w-full h-44 object-cover border border-[#E2E8F0] transition-transform duration-300 group-hover:scale-105" />
+            {filteredCourses.map(course => {
+              const isAdmin = user?.role === 'admin';
+              const isFaculty = user?.role === 'faculty' || user?.role === 'tutor';
+              const isOwnCourse = isFaculty && (
+                (course.tutorId && (course.tutorId === user?._id || course.tutorId === user?.id)) ||
+                (course.instructor && user?.name && course.instructor.toLowerCase().includes(user.name.toLowerCase()))
+              );
+              const canDeleteCourse = isAdmin || isOwnCourse;
+
+              return (
+                <Card key={course.id} hover onClick={() => navigate(`/courses/${course.id}`)} className="space-y-4 relative group cursor-pointer">
+                  <div className="relative overflow-hidden rounded-[14px]">
+                    <img src={course.image} alt="" className="w-full h-44 object-cover border border-[#E2E8F0] transition-transform duration-300 group-hover:scale-105" />
+                    
+                    {/* Delete Button for Admin (All courses) & Faculty (Own courses only) */}
+                    {canDeleteCourse && (
+                      <button
+                        onClick={(e) => handleDeleteCourse(course.id, e)}
+                        className="absolute top-3 left-3 p-2 bg-rose-600/90 hover:bg-rose-700 text-white rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all z-10 cursor-pointer flex items-center justify-center"
+                        title={isAdmin ? "Admin Delete Course" : "Delete Your Uploaded Course"}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -526,7 +561,8 @@ export default function CoursesPage() {
                   <span className="font-bold text-[#22C55E]">{course.price}</span>
                 </div>
               </Card>
-            ))}
+            );
+          })}
           </div>
         )}
       </div>

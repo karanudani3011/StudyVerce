@@ -11,6 +11,8 @@ import noteRoutes from './routes/noteRoutes.js';
 import tutorRoutes from './routes/tutorRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
+import messageRoutes from './routes/messageRoutes.js';
 
 import adminRoutes from './routes/adminRoutes.js';
 import { seedDefaultAdmin } from './controllers/adminController.js';
@@ -45,6 +47,8 @@ app.use('/api/notes', noteRoutes);
 app.use('/api/tutors', tutorRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/messages', messageRoutes);
 
 // ─── Health Check ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
+import Tutor from '../models/Tutor.js';
 import sendPasswordResetEmail from '../utils/sendEmail.js';
 
 // Helper to generate JWT Token
@@ -77,10 +78,18 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Please provide email and password.' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    let user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    let isTutor = false;
+
+    if (!user) {
+      user = await Tutor.findOne({ email: email.toLowerCase() }).select('+password');
+      if (user) isTutor = true;
+    }
 
     if (user && (await user.matchPassword(password))) {
-      const token = generateToken(user._id);
+      const token = jwt.sign({ id: user._id, isTutor: isTutor || user.role === 'tutor' || user.role === 'faculty' }, process.env.JWT_SECRET || 'secret123', {
+        expiresIn: process.env.JWT_EXPIRE || '30d',
+      });
       return res.json({
         success: true,
         token,
@@ -93,11 +102,14 @@ export const loginUser = async (req, res) => {
           bio: user.bio,
           coverImage: user.coverImage,
           institution: user.institution,
+          department: user.department,
+          title: user.title,
           role: user.role,
-          xp: user.xp,
-          streak: user.streak,
-          dailyGoalMinutes: user.dailyGoalMinutes,
-          currentGoalMinutes: user.currentGoalMinutes,
+          isVerified: user.isVerified,
+          xp: user.xp || 0,
+          streak: user.streak || 1,
+          dailyGoalMinutes: user.dailyGoalMinutes || 60,
+          currentGoalMinutes: user.currentGoalMinutes || 45,
           wishlistedCourses: user.wishlistedCourses || [],
         },
       });
@@ -171,7 +183,10 @@ export const googleAuthSync = async (req, res) => {
 // @access  Private
 export const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    let user = await User.findById(req.user._id);
+    if (!user) {
+      user = await Tutor.findById(req.user._id);
+    }
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -186,11 +201,14 @@ export const getMe = async (req, res) => {
         bio: user.bio,
         coverImage: user.coverImage,
         institution: user.institution,
+        department: user.department,
+        title: user.title,
         role: user.role,
-        xp: user.xp,
-        streak: user.streak,
-        dailyGoalMinutes: user.dailyGoalMinutes,
-        currentGoalMinutes: user.currentGoalMinutes,
+        isVerified: user.isVerified,
+        xp: user.xp || 0,
+        streak: user.streak || 1,
+        dailyGoalMinutes: user.dailyGoalMinutes || 60,
+        currentGoalMinutes: user.currentGoalMinutes || 45,
         wishlistedCourses: user.wishlistedCourses || [],
       },
     });
@@ -210,7 +228,10 @@ export const forgotPassword = async (req, res) => {
       return res.status(400).json({ message: 'Please provide your email address.' });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    let user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      user = await Tutor.findOne({ email: email.toLowerCase() });
+    }
 
     // Always return success to prevent email enumeration attacks
     if (!user) {
@@ -260,8 +281,12 @@ export const resetPassword = async (req, res) => {
     }
 
     // Fetch user WITH the protected OTP fields
-    const user = await User.findOne({ email: email.toLowerCase() })
+    let user = await User.findOne({ email: email.toLowerCase() })
       .select('+passwordResetOtp +passwordResetOtpExpiry');
+    if (!user) {
+      user = await Tutor.findOne({ email: email.toLowerCase() })
+        .select('+passwordResetOtp +passwordResetOtpExpiry');
+    }
 
     if (!user || !user.passwordResetOtp || !user.passwordResetOtpExpiry) {
       return res.status(400).json({ message: 'No active reset code found. Please request a new one.' });

@@ -5,7 +5,8 @@ import Tutor from '../models/Tutor.js';
 import Community from '../models/Community.js';
 import Course from '../models/Course.js';
 import TutorApplication from '../models/TutorApplication.js';
-import Report from '../models/Report.js';
+import Message from '../models/Message.js';
+import Conversation from '../models/Conversation.js';
 
 // Helper to generate JWT Token for Admin
 const generateToken = (id) => {
@@ -379,5 +380,110 @@ export const deleteReportedContent = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: error.message || 'Server error deleting content.' });
+  }
+};
+
+// @desc    Get Faculty list for Admin Messaging (Students excluded!)
+// @route   GET /api/admin/faculty-messages/list
+// @access  Private (Admin)
+export const getFacultyForAdminMessaging = async (req, res) => {
+  try {
+    const faculty = await Tutor.find().select('name username avatar role institution department title email status').sort({ name: 1 });
+    return res.json({
+      success: true,
+      faculty,
+    });
+  } catch (error) {
+    console.error('Get Faculty for Admin Messaging Error:', error);
+    return res.status(500).json({ message: error.message || 'Server error fetching faculty list.' });
+  }
+};
+
+// @desc    Get Chat History between Admin and a Faculty Educator
+// @route   GET /api/admin/faculty-messages/:facultyId
+// @access  Private (Admin)
+export const getAdminFacultyChatHistory = async (req, res) => {
+  try {
+    const adminId = req.user._id;
+    const { facultyId } = req.params;
+
+    const faculty = await Tutor.findById(facultyId).select('name username avatar role institution department title email');
+    if (!faculty) {
+      return res.status(404).json({ message: 'Faculty educator not found.' });
+    }
+
+    const conversationId = [adminId.toString(), facultyId.toString()].sort().join('_');
+    const messages = await Message.find({ conversationId }).sort({ createdAt: 1 });
+
+    return res.json({
+      success: true,
+      faculty,
+      messages: messages.map((m) => ({
+        id: m._id,
+        senderId: m.senderId.toString(),
+        receiverId: m.receiverId.toString(),
+        text: m.text,
+        createdAt: m.createdAt,
+        isMe: m.senderId.toString() === adminId.toString(),
+      })),
+    });
+  } catch (error) {
+    console.error('Get Admin-Faculty Chat History Error:', error);
+    return res.status(500).json({ message: error.message || 'Server error fetching chat history.' });
+  }
+};
+
+// @desc    Send Message from Admin to a Faculty Educator
+// @route   POST /api/admin/faculty-messages/send
+// @access  Private (Admin)
+export const sendAdminFacultyMessage = async (req, res) => {
+  try {
+    const adminId = req.user._id;
+    const { facultyId, text } = req.body;
+
+    if (!facultyId || !text || !text.trim()) {
+      return res.status(400).json({ message: 'Faculty ID and message text are required.' });
+    }
+
+    const faculty = await Tutor.findById(facultyId);
+    if (!faculty) {
+      return res.status(404).json({ message: 'Target Faculty Educator not found in database.' });
+    }
+
+    const conversationId = [adminId.toString(), facultyId.toString()].sort().join('_');
+
+    const message = await Message.create({
+      conversationId,
+      senderId: adminId,
+      receiverId: facultyId,
+      text: text.trim(),
+    });
+
+    await Conversation.findOneAndUpdate(
+      { conversationId },
+      {
+        conversationId,
+        participants: [adminId, facultyId],
+        lastMessage: text.trim(),
+        lastSenderId: adminId,
+        lastMessageAt: new Date(),
+      },
+      { upsert: true, new: true }
+    );
+
+    return res.json({
+      success: true,
+      message: {
+        id: message._id,
+        senderId: message.senderId.toString(),
+        receiverId: message.receiverId.toString(),
+        text: message.text,
+        createdAt: message.createdAt,
+        isMe: true,
+      },
+    });
+  } catch (error) {
+    console.error('Send Admin-Faculty Message Error:', error);
+    return res.status(500).json({ message: error.message || 'Server error sending message to faculty.' });
   }
 };

@@ -67,6 +67,9 @@ const AdminUsersPage    = lazy(() => import('../pages/admin/AdminUsersPage'));
 const AdminFacultyPage  = lazy(() => import('../pages/admin/AdminFacultyPage'));
 const AdminVerifications = lazy(() => import('../pages/admin/AdminVerifications'));
 const AdminReports      = lazy(() => import('../pages/admin/AdminReports'));
+const AdminFacultyMessages = lazy(() => import('../pages/admin/AdminFacultyMessages'));
+const ApplyTutorPage    = lazy(() => import('../pages/apply-tutor/ApplyTutorPage'));
+const TutorAnalytics    = lazy(() => import('../pages/tutor/TutorAnalytics'));
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
@@ -170,6 +173,7 @@ export const AppRouter = () => (
                   <Route path="/admin/dashboard"    element={<AdminDashboard />} />
                   <Route path="/admin/users"        element={<AdminUsersPage />} />
                   <Route path="/admin/faculty"      element={<AdminFacultyPage />} />
+                  <Route path="/admin/messages"     element={<AdminFacultyMessages />} />
                   <Route path="/admin/verifications" element={<AdminVerifications />} />
                   <Route path="/admin/reports"      element={<AdminReports />} />
                 </Route>
@@ -209,6 +213,8 @@ export const AppRouter = () => (
                   <Route path="/subscription"      element={<SubscriptionPage />} />
                   <Route path="/payment"           element={<PaymentPage />} />
                   <Route path="/payment/success"   element={<PaymentSuccess />} />
+                  <Route path="/apply-tutor"       element={<ApplyTutorPage />} />
+                  <Route path="/tutor/analytics"   element={<TutorAnalytics />} />
                 </Route>
 
                 <Route path="*"                  element={<NotFound />} />

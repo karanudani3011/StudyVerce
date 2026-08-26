@@ -29,6 +29,13 @@ export const protect = async (req, res, next) => {
         req.user = await User.findById(decoded.id).select('-password');
       }
 
+      // Robust fallback lookup across collections
+      if (!req.user) {
+        req.user = (await Tutor.findById(decoded.id).select('-password')) ||
+                   (await User.findById(decoded.id).select('-password')) ||
+                   (await Admin.findById(decoded.id).select('-password'));
+      }
+
       if (!req.user) {
         return res.status(401).json({ message: 'User no longer exists.' });
       }

@@ -22,6 +22,7 @@ export default function EditProfile() {
   const navigate = useNavigate();
   const { addToast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const avatarInputRef = useRef(null);
   const bannerInputRef = useRef(null);
@@ -123,9 +124,21 @@ export default function EditProfile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setFormError('');
+
+    if (!name.trim()) {
+      setFormError('Full Name cannot be empty.');
+      setSaving(false);
+      return;
+    }
 
     let formattedUsername = username.trim();
-    if (formattedUsername && !formattedUsername.startsWith('@')) {
+    if (!formattedUsername) {
+      setFormError('Username cannot be empty.');
+      setSaving(false);
+      return;
+    }
+    if (!formattedUsername.startsWith('@')) {
       formattedUsername = `@${formattedUsername}`;
     }
 
@@ -142,7 +155,9 @@ export default function EditProfile() {
       addToast('Profile updated successfully! ✨', 'success');
       navigate('/profile');
     } catch (error) {
-      addToast(error.message || 'Failed to update profile', 'error');
+      const errMsg = error.message || 'Failed to update profile';
+      setFormError(errMsg);
+      addToast(errMsg, 'error');
     } finally {
       setSaving(false);
     }
@@ -165,6 +180,13 @@ export default function EditProfile() {
 
         <Card>
           <form onSubmit={handleSubmit} className="space-y-6">
+
+            {formError && (
+              <div className="flex items-center gap-3 p-4 rounded-[14px] bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+                <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
 
             {/* ── Banner Section ───────────────────────────────────────────── */}
             <div className="space-y-2">

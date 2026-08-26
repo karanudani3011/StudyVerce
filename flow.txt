@@ -1,0 +1,308 @@
+================================================================================
+                    STUDYVERSE WEB — COMPLETE SYSTEM FLOW
+================================================================================
+
+This document details the complete end-to-end user flows, page routes, security 
+guards, backend endpoints, and feature workflows for all 3 primary system roles:
+  1. ADMIN SIDE FLOW
+  2. FACULTY SIDE (TUTOR / EDUCATOR) FLOW
+  3. STUDENT SIDE FLOW
+
+================================================================================
+                             SECTION 1: ADMIN SIDE FLOW
+================================================================================
+
+[1.1] PURPOSE & ARCHITECTURE OVERVIEW
+--------------------------------------------------------------------------------
+The Admin Side provides platform administrators with centralized governance, 
+cyber monitoring, educator verification, isolated user database management, 
+and automated content moderation.
+
+Key Security Guard: AdminProtectedRoute (Restricts access exclusively to users 
+with `role === 'admin'`. Non-admin users are automatically redirected to `/admin/login`).
+
+
+[1.2] ADMIN ROUTING & NAVIGATION MAP
+--------------------------------------------------------------------------------
+Route Path               Tab Identifier        Component               Access
+--------------------------------------------------------------------------------
+/admin/login             admin-login           AdminLoginPage          Public / Admin
+/admin/dashboard         admin-dashboard       AdminDashboard          Admin Protected
+/admin/users             admin-users           AdminUsersPage          Admin Protected
+/admin/faculty           admin-faculty         AdminFacultyPage        Admin Protected
+/admin/verifications     admin-verifications   AdminVerifications      Admin Protected
+/admin/reports           admin-reports         AdminReports            Admin Protected
+
+
+[1.3] STEP-BY-STEP ADMIN WORKFLOWS
+--------------------------------------------------------------------------------
+
+A. Admin Authentication & Entry Flow
+   1. Access Portal: Admin navigates to `/admin/login` or selects "Admin Portal".
+   2. Credentials Input: Enters administrative email and passcode/password.
+   3. Backend Verification: API verifies token & role claim `role === 'admin'`.
+   4. Authorization Success: Redirected directly to Cyber Command Panel `/admin/dashboard`.
+
+B. Cyber Command Panel & Platform Intelligence (`/admin/dashboard`)
+   1. Real-Time Platform KPI Metrics:
+      - Total Student Users (Fetched from `/api/admin/stats`).
+      - Total Faculty & Tutors (`@faculty.studyverse.com` field).
+      - Active Study Communities count.
+      - Published Course count.
+   2. System Control Actions:
+      - Refresh Data: Re-fetches latest platform analytics on demand.
+      - Purge DB Faculty: Performs automated database cleanup of unverified accounts.
+   3. System Suggestions & Recommendations Engine:
+      - Suggestion 1: Faculty domain validation enforcement.
+      - Suggestion 2: User database field isolation.
+      - Suggestion 3: Automated weekly content moderation.
+      - Suggestion 4: Pending tutor application review alerts.
+   4. Quick Navigation Hub: One-click jump to isolated Student or Faculty directories.
+
+C. Student Users Directory Management (`/admin/users`)
+   1. View Student Registry: Displays all registered student accounts in an isolated field.
+   2. Search & Filter: Filter students by name, email, or institution.
+   3. Student Account Inspection: View student XP levels, joined date, and activity stats.
+   4. Moderation Actions: Deactivate, suspend, or delete student accounts if needed.
+
+D. Isolated Faculty Directory Management (`/admin/faculty`)
+   1. Domain-Validated Educator List: Displays faculty members verified via official domain (`@faculty.studyverse.com`).
+   2. Educator Inspection: View assigned courses, total enrolled students, and teaching notes published.
+   3. Faculty Actions: Revoke faculty status, audit educator permissions, or clean legacy records.
+
+E. Tutor Application Review Portal (`/admin/verifications`)
+   1. Fetch Applications: Loads tutor verification submissions from `/api/admin/applications`.
+   2. Filter Status Tabs: All | Pending Review | Approved | Rejected.
+   3. Candidate Application Audit:
+      - Applicant Name, Email, Title, and Applied Date.
+      - Subject specialization & Institution affiliation.
+      - Teaching Experience (years) & Bio.
+      - Credential Document URL (Inspect PDF degree/certificate).
+   4. Admin Approval Flow:
+      - Click "Approve" -> Backend API updates status to `approved`, updates user role to `tutor`, and assigns the "Verified Educator" badge.
+   5. Admin Rejection Flow:
+      - Click "Reject" -> Optionally enter rejection reason -> Backend API updates status to `rejected`.
+
+F. Content Moderation Desk (`/admin/reports`)
+   1. Flagged Item Queue: Loads reported content (Posts, Comments, Notes, Spam).
+   2. Moderation Audit: Inspect reported item preview, reporter name, timestamp, and flag reason.
+   3. Resolution Actions:
+      - "Dismiss Report": Clears report from queue without altering content.
+      - "Delete Content": Purges flagged item from database and notifies creator.
+
+================================================================================
+                    SECTION 2: FACULTY SIDE (TUTOR / EDUCATOR) FLOW
+================================================================================
+
+[2.1] PURPOSE & ARCHITECTURE OVERVIEW
+--------------------------------------------------------------------------------
+The Faculty/Tutor Side provides verified educators and university instructors 
+with a dedicated Teaching Studio. Faculty members can create structured video 
+courses, publish handwritten teaching notes, answer student queries, host live 
+office hours, and track course analytics.
+
+Role Access: Users with `role === 'tutor'`, `role === 'faculty'`, or `role === 'admin'` 
+via `RoleProtectedRoute`. Student-centric widgets (e.g. AI Tutor prompts, study streaks) 
+are replaced with professional educator controls.
+
+
+[2.2] FACULTY ROUTING & NAVIGATION MAP
+--------------------------------------------------------------------------------
+Route Path               Tab Identifier        Component               Access
+--------------------------------------------------------------------------------
+/tutor/dashboard         tutor-dashboard       TutorDashboard          Faculty Protected
+/tutor/analytics         tutor-analytics       TutorAnalytics          Faculty Protected
+/apply-tutor             apply-tutor           ApplyTutorPage          Public / Student
+
+
+[2.3] STEP-BY-STEP FACULTY WORKFLOWS
+--------------------------------------------------------------------------------
+
+A. Educator Onboarding & Authentication
+   1. Direct Registration / Login: Log in with an approved `@faculty.studyverse.com` credential.
+   2. Or Student Promotion: Submit application via `/apply-tutor` -> Admin approves -> Role changes to `tutor`.
+   3. Redirect to Teaching Studio: User enters `/tutor/dashboard`.
+
+B. Educator Studio & Command Center (`/tutor/dashboard`)
+   1. Studio Header Banner:
+      - Displays Verified Educator Badge & Faculty Score rating (e.g. ⭐ 4.9).
+      - Institution & Department affiliation (e.g. Stanford University · Computer Science).
+      - Quick Action Buttons: Upload Course, Publish Notes, Flag Content.
+   2. High-Level Metrics Summary:
+      - Total Active Students Enrolled.
+      - Number of Published Courses.
+      - Total Note Downloads in Explore Vault.
+      - Cumulative Student XP Awarded.
+
+C. Studio Sub-Navigation Tabs & Features
+   
+   Tab 1: 📊 Studio Overview
+   - View top featured courses, student enrollment progress, and completion percentages.
+   - Quick preview of top pending student questions requiring attention.
+
+   Tab 2: 📚 My Courses & Curriculum Builder
+   - Action: Click "Add New Course" -> Opens `CourseUploadModal`.
+   - Form Inputs: Course Title, Category, Banner Image URL, Description, Duration.
+   - Lecture Builder: Add video modules, attach PDF lecture slides & assignments.
+   - Course List Management: Edit existing curriculum, view rating, monitor active student enrollments.
+
+   Tab 3: 📝 Teaching Notes & Vault
+   - Action: Click "Publish New Notes" -> Opens `UploadNotebookModal`.
+   - Form Inputs: Note Title, Subject Category, Format (Handwritten Pages / Formula Sheets / Mindmaps), Upload File.
+   - Student Reach Tracking: Monitor real-time downloads and student likes in Explore Vault.
+
+   Tab 4: 💬 Student Q&A Desk
+   - Query Inbox: View incoming questions from students enrolled in courses.
+   - Filter Status: Pending Answer ⏳ vs Answered ✓.
+   - Response Action: Click "Write Answer" -> Enter detailed response -> Submit.
+   - Reward Mechanism: Submitting answer automatically awards +50 XP to student.
+
+   Tab 5: 🗓️ Live Office Hours & Webinars
+   - Action: Click "Schedule Session".
+   - Set Title, Date & Time, Duration, and Live Room URL (e.g. Google Meet link).
+   - Display enrolled student list and provide "Join Room ↗" button for active webinars.
+
+   Tab 6: 🎓 My Application & Verification Status
+   - Live Application Status Tracker for tutors checking verification state:
+     * ⏳ Under Review: Application pending admin approval.
+     * ✅ Approved: Verification completed, educator badge activated.
+     * ❌ Not Approved: View specific rejection reason provided by admin.
+
+D. Educator Analytics Studio (`/tutor/analytics`)
+   1. Student Progress Metrics: Average course completion rate breakdown.
+   2. Quiz Score Analytics: Student score distribution on quizzes attached to course modules.
+   3. Content Performance: Views vs Downloads ratio across published notes and lectures.
+
+================================================================================
+                             SECTION 3: STUDENT SIDE FLOW
+================================================================================
+
+[3.1] PURPOSE & ARCHITECTURE OVERVIEW
+--------------------------------------------------------------------------------
+The Student Side is an Instagram-style interactive educational social platform. 
+Students can browse learning feeds, watch study reels, download handwritten notes, 
+enroll in faculty-led courses, solve quizzes, earn XP, compete on leaderboards, 
+interact with an AI Tutor, and join study communities.
+
+
+[3.2] STUDENT ROUTING & NAVIGATION MAP
+--------------------------------------------------------------------------------
+Route Path               Tab Identifier        Component               Access
+--------------------------------------------------------------------------------
+/                        landing               LandingPage             Public
+/login, /signup          login, signup         AuthPages               Public
+/dashboard               dashboard             DashboardPage           Student / All
+/feed                    feed                  FeedPage                Student / All
+/upload                  upload                UploadPage              Student / All
+/explore                 explore               ExplorePage             Student / All
+/ai-tutor                ai-tutor              AITutorPage             Student / All
+/community               community             CommunityPage           Student / All
+/profile                 profile               ProfilePage             Student / All
+/notifications           notifications         NotificationPage        Student / All
+/search                  search                SearchPage              Student / All
+/leaderboard             leaderboard           LeaderboardPage         Student / All
+/settings                settings              SettingsPage            Student / All
+/apply-tutor             apply-tutor           ApplyTutorPage          Student
+
+
+[3.3] STEP-BY-STEP STUDENT WORKFLOWS
+--------------------------------------------------------------------------------
+
+A. Student Authentication & Onboarding
+   1. Account Registration (`/signup`):
+      - Register via Email/Password or Social Providers (Google, GitHub, Apple).
+      - Account initialized with default `role = 'student'`, XP = 0, level = 1.
+   2. Login Session (`/login`):
+      - Authenticate -> Firebase session synchronized -> Navigates to `/dashboard`.
+
+B. Learning Dashboard (`/dashboard`)
+   1. Hero Greeting: Shows student name, current XP, and level status.
+   2. Daily Study Streak Widget: Tracks consecutive daily logins & activity.
+   3. My Learning & Enrolled Courses: Quick access to active courses, lecture progress, and resume playback.
+   4. Quick Feed Preview: Highlights top trending notes, recommended posts, and community announcements.
+
+C. Interactive Study Feed (`/feed`)
+   1. Content Feed Stream: Browse educational posts, short reels, and handwritten note summaries.
+   2. Social Engagements:
+      - Like, Comment, Save/Bookmark, and Share posts.
+      - Attempt interactive multiple-choice quizzes attached to posts -> Earn instant XP on correct answers.
+      - Flag Content: Option to report inappropriate content to Admin Moderation.
+
+D. Content Upload Studio (`/upload`)
+   1. Upload Types: Post, Short Video Reel, or Handwritten Note.
+   2. Target Destinations:
+      - Public Feed
+      - Explore Vault
+      - Specific Joined Community
+   3. File Upload: Attach PDF, Image, or Video file along with Title, Subject, and Description.
+
+E. Explore Hub & Note Vault (`/explore`)
+   1. Course Discovery: Browse faculty courses filtered by Subject, Level, or Rating.
+   2. Note Vault: Search & download verified handwritten notes uploaded by Faculty or top students.
+   3. Search & Subject Filter: Search by keywords (e.g. Machine Learning, Physics, Computer Science).
+
+F. AI Tutor & Homework Assistant (`/ai-tutor`)
+   1. Powered by Gemini 2.5 / 3.6 Flash API.
+   2. Conversational Assistant: Ask complex academic questions, derivation steps, or code debugging.
+   3. Interactive Tools:
+      - Concept Explainer (Simplifies difficult topics).
+      - Quiz & Flashcard Generator.
+      - Math & Science Problem Solver.
+
+G. Study Communities (`/community`)
+   1. Community Discovery: Browse public and private/paid study hubs.
+   2. Community Membership: Join free communities or purchase access for premium paywalled groups.
+   3. Community Discussions: Post questions, share files, and collaborate with peers in group feeds.
+
+H. Leaderboard & Gamification (`/leaderboard`)
+   1. Global Ranking: View top student scholars ranked by total earned XP.
+   2. Weekly Challenges: Participate in weekly study milestones to earn special badges.
+   3. Achievements & Badges: Track unlocked badges (e.g. Night Owl, Quiz Master, Note Creator).
+
+I. Tutor Application Journey (`/apply-tutor`)
+   1. Eligibility: Open to senior students or educators seeking Faculty verification.
+   2. Form Submission:
+      - Enter Full Name, Email, Subject Specialization, Institution, Teaching Experience (years), Bio.
+      - Provide Credential URL (link to PDF diploma, certificate, or resume).
+   3. Submission Result: Application saved with `status = 'pending'` -> Redirected to Application Tracker.
+   4. Status Outcome:
+      - Admin Approves -> Promoted to Tutor role, gains access to `/tutor/dashboard`.
+      - Admin Rejects -> Provided with feedback to update and re-apply.
+
+J. Student Profile & Settings (`/profile`, `/settings`, `/notifications`)
+   1. Profile Page: View personal bio, earned badges, saved posts, enrolled courses, and published notes.
+   2. Notifications: Receive updates on course answers, comment replies, community posts, and application status.
+   3. Settings: Toggle Theme (Dark / Light Mode), update profile details, and manage account security.
+
+================================================================================
+                           SUMMARY FLOW ARCHITECTURE
+================================================================================
+
+ [ USER VISITS WEBSITE ]
+            │
+            ├── ADMIN ROUTE ──> Admin Login ──> Role Check ('admin') ──> Cyber Command Panel (/admin/dashboard)
+            │                                                                 │
+            │                                                                 ├── User Directory (/admin/users)
+            │                                                                 ├── Faculty Directory (/admin/faculty)
+            │                                                                 ├── Tutor Verification (/admin/verifications)
+            │                                                                 └── Moderation Desk (/admin/reports)
+            │
+            ├── FACULTY ROUTE ──> Faculty Login / Approved App ──> Role Check ('tutor') ──> Teaching Studio (/tutor/dashboard)
+            │                                                                                   │
+            │                                                                                   ├── Overview & Analytics
+            │                                                                                   ├── Course Builder (CourseUploadModal)
+            │                                                                                   ├── Note Vault (UploadNotebookModal)
+            │                                                                                   ├── Student Q&A Desk
+            │                                                                                   └── Live Office Hours
+            │
+            └── STUDENT ROUTE ──> Register / Login ──> Role ('student') ──> Learning Dashboard (/dashboard)
+                                                                                  │
+                                                                                  ├── Study Feed (/feed)
+                                                                                  ├── Explore & Courses (/explore)
+                                                                                  ├── AI Tutor (/ai-tutor)
+                                                                                  ├── Communities (/community)
+                                                                                  ├── Content Upload (/upload)
+                                                                                  ├── Leaderboard (/leaderboard)
+                                                                                  └── Apply for Tutor (/apply-tutor)
+
+================================================================================

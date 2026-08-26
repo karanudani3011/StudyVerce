@@ -5,10 +5,12 @@ import {
   LayoutDashboard,
   Users,
   GraduationCap,
+  MessageSquare,
   ShieldCheck,
   Flag,
   LogOut,
   ExternalLink,
+  BookOpen,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { apiGet } from '../../config/api';
@@ -37,8 +39,10 @@ export function AdminLayout({ children }) {
 
   const NAV_ITEMS = [
     { id: 'admin-dashboard', path: '/admin/dashboard', label: 'Platform Overview', icon: LayoutDashboard },
+    { id: 'admin-courses', path: '/courses', label: 'All Courses & Catalog', icon: BookOpen, badge: 'All Courses' },
     { id: 'admin-users', path: '/admin/users', label: 'All Student Users', icon: Users, badge: 'Field' },
     { id: 'admin-faculty', path: '/admin/faculty', label: 'All Faculty & Tutors', icon: GraduationCap, badge: 'Field' },
+    { id: 'admin-messages', path: '/admin/messages', label: 'Faculty Messages', icon: MessageSquare, badge: 'Faculty Only' },
     { id: 'admin-verifications', path: '/admin/verifications', label: 'Tutor Applications', icon: ShieldCheck, liveCount: badgeCounts.applications },
     { id: 'admin-reports', path: '/admin/reports', label: 'Flagged Content', icon: Flag, liveCount: badgeCounts.reports },
   ];

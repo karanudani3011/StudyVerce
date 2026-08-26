@@ -19,10 +19,14 @@ import {
 } from 'lucide-react';
 import { apiGet, apiDelete } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
+import { CourseUploadModal } from '../../components/courses/CourseUploadModal';
+import { MOCK_COURSES } from '../../data/mockData';
 
 export default function AdminDashboard() {
-  const { setActiveTab } = useAuth();
+  const { user, setActiveTab } = useAuth();
   const navigate = useNavigate();
+
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
 
   const handleNav = (tabId, path) => {
     if (setActiveTab) setActiveTab(tabId);
@@ -35,6 +39,7 @@ export default function AdminDashboard() {
     totalCommunities: 0,
     totalCourses: 0,
   });
+  const [adminCourses, setAdminCourses] = useState(MOCK_COURSES);
   const [loading, setLoading] = useState(true);
   const [purging, setPurging] = useState(false);
   const [purgeMsg, setPurgeMsg] = useState('');
@@ -46,11 +51,34 @@ export default function AdminDashboard() {
       if (data && data.success && data.stats) {
         setStats(data.stats);
       }
+      const cData = await apiGet('/courses');
+      if (cData && cData.success && Array.isArray(cData.data) && cData.data.length > 0) {
+        const formatted = cData.data.map(c => ({
+          _id: c._id,
+          id: c._id || c.id,
+          title: c.title,
+          instructor: c.instructor,
+          image: c.image,
+          category: c.category,
+        }));
+        setAdminCourses([...formatted, ...MOCK_COURSES]);
+      }
     } catch (err) {
       console.warn('Failed to fetch admin stats, using live fallback:', err.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAdminDeleteCourse = async (courseId) => {
+    if (!window.confirm('Are you sure as Admin that you want to delete this course from the platform?')) return;
+    try {
+      await apiDelete(`/courses/${courseId}`);
+    } catch (err) {
+      console.warn('Admin delete course error:', err.message);
+    }
+    setAdminCourses(prev => prev.filter(c => (c._id || c.id) !== courseId));
+    fetchStats();
   };
 
   useEffect(() => {
@@ -140,6 +168,12 @@ export default function AdminDashboard() {
 
           <div className="flex items-center gap-2.5 relative z-10">
             <button
+              onClick={() => setIsCourseModalOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-600/30"
+            >
+              <BookOpen className="w-4 h-4 text-emerald-200" /> ⚡ Create Course & Category
+            </button>
+            <button
               onClick={fetchStats}
               className="px-4 py-2.5 rounded-xl bg-[#132235] hover:bg-[#1C2F47] border border-[#1E293B] text-slate-200 text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer shadow-md"
             >
@@ -203,15 +237,15 @@ export default function AdminDashboard() {
             },
             {
               label: 'Published Courses',
-              value: loading ? '...' : stats.totalCourses,
+              value: loading ? '...' : (stats.totalCourses || adminCourses.length),
               sub: 'Educator Verified Modules',
               icon: BookOpen,
               color: 'text-emerald-300',
               borderColor: 'border-emerald-400/30',
               glowColor: 'shadow-emerald-400/10',
               bg: 'bg-gradient-to-b from-emerald-900/20 to-[#0B1522]',
-              tab: 'admin-dashboard',
-              path: '/admin/dashboard',
+              tab: 'admin-courses',
+              path: '/courses',
             },
           ].map((s) => (
             <div
@@ -304,6 +338,58 @@ export default function AdminDashboard() {
             ))}
           </div>
         </div>
+
+        {/* All Published Courses (Admin Control & Delete) */}
+        {adminCourses.length > 0 && (
+          <div className="p-6 sm:p-7 rounded-3xl bg-[#0B1522]/90 border border-[#1E293B] space-y-5 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-white tracking-tight">Published Platform Courses</h2>
+                  <p className="text-xs text-slate-400">Admin Control Center: Inspect or Delete any course across StudyVerse</p>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/60 text-xs font-black">
+                {adminCourses.length} Active Courses
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {adminCourses.map((c) => (
+                <div
+                  key={c._id || c.id}
+                  className="p-4 rounded-2xl bg-[#07111D] border border-[#1E293B] flex items-center justify-between gap-4 group"
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <img src={c.image} alt="" className="w-12 h-12 rounded-xl object-cover border border-[#1E293B] shrink-0" />
+                    <div className="overflow-hidden">
+                      <h4 className="text-xs font-extrabold text-white truncate">{c.title}</h4>
+                      <p className="text-[11px] text-slate-400 truncate">{c.instructor} · {c.category || 'Computer Science'}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleAdminDeleteCourse(c._id || c.id)}
+                    className="px-3 py-1.5 rounded-xl bg-rose-950/60 hover:bg-rose-900 border border-rose-800/60 text-rose-300 hover:text-white text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                    title="Admin Delete Course"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Admin Course & Category Creator Modal */}
+        <CourseUploadModal
+          isOpen={isCourseModalOpen}
+          onClose={() => setIsCourseModalOpen(false)}
+          onCourseCreated={() => fetchStats()}
+          currentUser={user}
+        />
       </div>
     </AdminLayout>
   );

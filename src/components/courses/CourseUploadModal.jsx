@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, Sparkles, Plus, Trash2, Video, FileText, CheckCircle2, Award, BookOpen } from 'lucide-react';
+import { X, Upload, Sparkles, Plus, Trash2, Video, FileText, CheckCircle2, Award, BookOpen, Layers, FolderPlus, Edit3 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { apiPost } from '../../config/api';
@@ -12,8 +12,14 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
   // Form State
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('Computer Science');
-  const [category, setCategory] = useState('Technology & CS');
-  const [subcategory, setSubcategory] = useState('Artificial Intelligence');
+  
+  // Category & Subcategory State (Dual Dropdown + Manual Textbox)
+  const [categorySelect, setCategorySelect] = useState('Technology & CS');
+  const [categoryInput, setCategoryInput] = useState('Technology & CS');
+
+  const [subcategorySelect, setSubcategorySelect] = useState('Artificial Intelligence');
+  const [subcategoryInput, setSubcategoryInput] = useState('Artificial Intelligence');
+
   const [level, setLevel] = useState('Beginner');
   const [price, setPrice] = useState('Free');
   const [duration, setDuration] = useState('12 hrs');
@@ -21,29 +27,99 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('AI, MachineLearning, Python');
 
-  // Lectures State
-  const [lectures, setLectures] = useState([
-    { title: 'Lecture 1: Course Overview & Prerequisites', duration: '15 mins', videoUrl: 'https://www.youtube.com/watch?v=aircAruvnKk', pdfUrl: '' },
-    { title: 'Lecture 2: Core Concepts & Principles', duration: '25 mins', videoUrl: 'https://www.youtube.com/watch?v=aircAruvnKk', pdfUrl: '' }
+  // Course Sections & Lectures State
+  const [sections, setSections] = useState([
+    {
+      sectionTitle: 'Section 1: Introduction & Foundations',
+      lectures: [
+        { title: 'Lecture 1: Overview & Prerequisites', duration: '15 mins', videoUrl: 'https://www.youtube.com/watch?v=aircAruvnKk', pdfUrl: '' },
+        { title: 'Lecture 2: Core Concepts & Principles', duration: '25 mins', videoUrl: 'https://www.youtube.com/watch?v=aircAruvnKk', pdfUrl: '' }
+      ]
+    }
   ]);
 
   if (!isOpen) return null;
 
-  const handleAddLecture = () => {
-    setLectures(prev => [
+  // Handle Category Select Change
+  const handleCategorySelectChange = (e) => {
+    const val = e.target.value;
+    setCategorySelect(val);
+    if (val !== 'CUSTOM') {
+      setCategoryInput(val);
+    } else {
+      setCategoryInput('');
+    }
+  };
+
+  // Handle Subcategory Select Change
+  const handleSubcategorySelectChange = (e) => {
+    const val = e.target.value;
+    setSubcategorySelect(val);
+    if (val !== 'CUSTOM') {
+      setSubcategoryInput(val);
+    } else {
+      setSubcategoryInput('');
+    }
+  };
+
+  // Add Section
+  const handleAddSection = () => {
+    setSections(prev => [
       ...prev,
-      { title: `Lecture ${prev.length + 1}: Key Topic Details`, duration: '20 mins', videoUrl: '', pdfUrl: '' }
+      {
+        sectionTitle: `Section ${prev.length + 1}: Advanced Topics & Projects`,
+        lectures: [
+          { title: 'Lecture 1: Key Topic Details', duration: '20 mins', videoUrl: '', pdfUrl: '' }
+        ]
+      }
     ]);
   };
 
-  const handleRemoveLecture = (index) => {
-    setLectures(prev => prev.filter((_, i) => i !== index));
+  // Remove Section
+  const handleRemoveSection = (secIndex) => {
+    if (sections.length <= 1) return;
+    setSections(prev => prev.filter((_, i) => i !== secIndex));
   };
 
-  const handleLectureChange = (index, field, value) => {
-    setLectures(prev => {
+  // Update Section Title
+  const handleSectionTitleChange = (secIndex, val) => {
+    setSections(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      updated[secIndex].sectionTitle = val;
+      return updated;
+    });
+  };
+
+  // Add Lecture to Section
+  const handleAddLectureToSection = (secIndex) => {
+    setSections(prev => {
+      const updated = [...prev];
+      const curLectures = updated[secIndex].lectures;
+      updated[secIndex].lectures = [
+        ...curLectures,
+        { title: `Lecture ${curLectures.length + 1}: Lesson Details`, duration: '15 mins', videoUrl: '', pdfUrl: '' }
+      ];
+      return updated;
+    });
+  };
+
+  // Remove Lecture from Section
+  const handleRemoveLectureFromSection = (secIndex, lecIndex) => {
+    setSections(prev => {
+      const updated = [...prev];
+      if (updated[secIndex].lectures.length <= 1) return updated;
+      updated[secIndex].lectures = updated[secIndex].lectures.filter((_, i) => i !== lecIndex);
+      return updated;
+    });
+  };
+
+  // Update Lecture Field
+  const handleLectureChange = (secIndex, lecIndex, field, value) => {
+    setSections(prev => {
+      const updated = [...prev];
+      const lectures = [...updated[secIndex].lectures];
+      lectures[lecIndex] = { ...lectures[lecIndex], [field]: value };
+      updated[secIndex].lectures = lectures;
       return updated;
     });
   };
@@ -53,29 +129,35 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
     setIsSubmitting(true);
 
     try {
+      const finalCategory = categoryInput.trim() || 'General';
+      const finalSubcategory = subcategoryInput.trim() || 'General';
+      
+      const allLecturesFlat = sections.flatMap(s => s.lectures.map(l => ({ ...l, section: s.sectionTitle })));
+
       const tagArray = tags.split(',').map(t => t.trim()).filter(Boolean);
       const coursePayload = {
         title,
-        instructor: currentUser?.name || 'Dr. Sarah Chen (Faculty)',
-        instructorAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?auto=format&fit=crop&q=80&w=100',
+        instructor: currentUser?.role === 'admin' ? '🛡️ StudyVerse Admin' : (currentUser?.name || 'Dr. Sarah Chen (Faculty)'),
+        instructorAvatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b47c?auto=format&fit=crop&w=800&q=80',
         image,
         tags: tagArray.length > 0 ? tagArray : ['Education', 'Online Course'],
         duration,
-        lessons: lectures.length,
+        lessons: allLecturesFlat.length,
         level,
         price,
         subject,
-        category,
-        subcategory,
+        category: finalCategory,
+        subcategory: finalSubcategory,
         description,
-        lectures,
+        sections,
+        lectures: allLecturesFlat,
       };
 
       const res = await apiPost('/courses', coursePayload);
       const newCourse = res.data || coursePayload;
 
       confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-      onCourseCreated(newCourse);
+      if (onCourseCreated) onCourseCreated(newCourse);
       onClose();
     } catch (err) {
       console.error('Failed to publish course:', err);
@@ -98,8 +180,10 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
               <Award className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-extrabold text-white">Upload New Course 🎓</h3>
-              <p className="text-xs text-slate-300">Tutor & Faculty Course Creator Portal</p>
+              <h3 className="text-base sm:text-lg font-extrabold text-white">
+                {currentUser?.role === 'admin' ? '🛡️ Admin Course & Category Creator' : 'Upload New Course 🎓'}
+              </h3>
+              <p className="text-xs text-slate-300">Add & Manage Category, Subcategory, Course & Sections</p>
             </div>
           </div>
           <button
@@ -117,7 +201,7 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
             className={`flex items-center gap-2 transition-colors cursor-pointer ${step === 1 ? 'text-[#4F7DF6]' : ''}`}
           >
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 1 ? 'bg-[#4F7DF6] text-white' : 'bg-slate-200'}`}>1</span>
-            Basic Information
+            Basic Details & Categories
           </button>
           <div className="w-8 h-px bg-[#E2E8F0]" />
           <button
@@ -125,55 +209,112 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
             className={`flex items-center gap-2 transition-colors cursor-pointer ${step === 2 ? 'text-[#4F7DF6]' : ''}`}
           >
             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[11px] ${step === 2 ? 'bg-[#4F7DF6] text-white' : 'bg-slate-200'}`}>2</span>
-            Syllabus & Lectures ({lectures.length})
+            Course Sections & Syllabus
           </button>
         </div>
 
         {/* Modal Form Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           {step === 1 ? (
-            <div className="space-y-4">
-              <Input
-                label="Course Title *"
-                placeholder="e.g. Advanced Quantum Computing for Machine Learning"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
+            <div className="space-y-5">
+              {/* COURSE TITLE TEXTBOX */}
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-[#1E293B] mb-1.5">
+                  Course Title (Manual Textbox) *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Advanced Quantum Computing for Machine Learning"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] focus:border-[#4F7DF6] focus:bg-white rounded-xl p-3 text-xs font-bold text-[#1E293B] outline-none transition-all shadow-sm"
+                  required
+                />
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5 ml-0.5">Category *</label>
+              {/* DUAL DROPDOWN & TEXTBOX FOR CATEGORY & SUBCATEGORY */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+                
+                {/* CATEGORY DROPDOWN + TEXTBOX */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black uppercase tracking-wider text-[#1E293B]">
+                      Category *
+                    </label>
+                    <span className="text-[10px] text-blue-600 font-extrabold flex items-center gap-1">
+                      <Edit3 className="w-3 h-3" /> Select or Type Below
+                    </span>
+                  </div>
+
+                  {/* Category Dropdown */}
                   <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-[#F5F7FB] border border-[#E2E8F0] focus:border-[#4F7DF6] focus:bg-white rounded-xl p-3 text-xs font-bold text-[#1E293B] outline-none"
+                    value={categorySelect}
+                    onChange={handleCategorySelectChange}
+                    className="w-full bg-white border border-[#E2E8F0] focus:border-[#4F7DF6] rounded-xl p-2.5 text-xs font-bold text-[#1E293B] outline-none shadow-sm cursor-pointer"
                   >
                     <option value="Technology & CS">Technology & CS</option>
                     <option value="Science">Science</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Engineering">Engineering</option>
+                    <option value="Business & Finance">Business & Finance</option>
+                    <option value="Arts & Humanities">Arts & Humanities</option>
+                    <option value="CUSTOM">✍️ Type Custom Category...</option>
                   </select>
+
+                  {/* Category Manual Textbox */}
+                  <input
+                    type="text"
+                    placeholder="Type category manually..."
+                    value={categoryInput}
+                    onChange={(e) => setCategoryInput(e.target.value)}
+                    className="w-full bg-white border border-[#4F7DF6]/50 focus:border-[#4F7DF6] rounded-xl p-2.5 text-xs font-black text-[#1E293B] outline-none shadow-inner"
+                    required
+                  />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5 ml-0.5">Subcategory *</label>
+                {/* SUBCATEGORY DROPDOWN + TEXTBOX */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black uppercase tracking-wider text-[#1E293B]">
+                      Subcategory *
+                    </label>
+                    <span className="text-[10px] text-blue-600 font-extrabold flex items-center gap-1">
+                      <Edit3 className="w-3 h-3" /> Select or Type Below
+                    </span>
+                  </div>
+
+                  {/* Subcategory Dropdown */}
                   <select
-                    value={subcategory}
-                    onChange={(e) => setSubcategory(e.target.value)}
-                    className="w-full bg-[#F5F7FB] border border-[#E2E8F0] focus:border-[#4F7DF6] focus:bg-white rounded-xl p-3 text-xs font-bold text-[#1E293B] outline-none"
+                    value={subcategorySelect}
+                    onChange={handleSubcategorySelectChange}
+                    className="w-full bg-white border border-[#E2E8F0] focus:border-[#4F7DF6] rounded-xl p-2.5 text-xs font-bold text-[#1E293B] outline-none shadow-sm cursor-pointer"
                   >
                     <option value="Artificial Intelligence">Artificial Intelligence</option>
                     <option value="Data Structures & Algorithms">Data Structures & Algorithms</option>
                     <option value="Web Development">Web Development</option>
-                    <option value="Physics">Physics</option>
-                    <option value="Chemistry">Chemistry</option>
-                    <option value="Biology">Biology</option>
+                    <option value="Quantum Physics">Quantum Physics</option>
+                    <option value="Organic Chemistry">Organic Chemistry</option>
+                    <option value="Molecular Biology">Molecular Biology</option>
+                    <option value="CUSTOM">✍️ Type Custom Subcategory...</option>
                   </select>
+
+                  {/* Subcategory Manual Textbox */}
+                  <input
+                    type="text"
+                    placeholder="Type subcategory manually..."
+                    value={subcategoryInput}
+                    onChange={(e) => setSubcategoryInput(e.target.value)}
+                    className="w-full bg-white border border-[#4F7DF6]/50 focus:border-[#4F7DF6] rounded-xl p-2.5 text-xs font-black text-[#1E293B] outline-none shadow-inner"
+                    required
+                  />
                 </div>
+
               </div>
 
+              {/* SUBJECT & LEVEL & PRICE */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5 ml-0.5">Subject Tag</label>
+                  <label className="block text-xs font-black uppercase tracking-wider text-[#64748B] mb-1.5 ml-0.5">Subject / Domain Textbox</label>
                   <input
                     type="text"
                     value={subject}
@@ -183,11 +324,11 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5 ml-0.5">Difficulty Level</label>
+                  <label className="block text-xs font-black uppercase tracking-wider text-[#64748B] mb-1.5 ml-0.5">Difficulty Level</label>
                   <select
                     value={level}
                     onChange={(e) => setLevel(e.target.value)}
-                    className="w-full bg-[#F5F7FB] border border-[#E2E8F0] rounded-xl p-3 text-xs font-bold text-[#1E293B] outline-none"
+                    className="w-full bg-[#F5F7FB] border border-[#E2E8F0] rounded-xl p-3 text-xs font-bold text-[#1E293B] outline-none cursor-pointer"
                   >
                     <option value="Beginner">Beginner</option>
                     <option value="Intermediate">Intermediate</option>
@@ -196,7 +337,7 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5 ml-0.5">Price / Access</label>
+                  <label className="block text-xs font-black uppercase tracking-wider text-[#64748B] mb-1.5 ml-0.5">Price / Access Textbox</label>
                   <input
                     type="text"
                     placeholder="Free or $29.99"
@@ -230,7 +371,7 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
               />
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-1.5 ml-0.5">Course Description & Learning Outcomes</label>
+                <label className="block text-xs font-black uppercase tracking-wider text-[#64748B] mb-1.5 ml-0.5">Course Description & Learning Outcomes</label>
                 <textarea
                   rows={3}
                   placeholder="Write a clear summary of what students will master..."
@@ -241,77 +382,122 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            /* STEP 2: SECTIONS & SYLLABUS MANAGEMENT */
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#1E293B]">Syllabus Modules & Video Lectures</h4>
+                <div>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-[#1E293B]">Course Sections & Syllabus Structure</h4>
+                  <p className="text-[11px] text-[#64748B]">Organize course materials into sections and video lectures</p>
+                </div>
                 <button
                   type="button"
-                  onClick={handleAddLecture}
-                  className="px-3 py-1.5 rounded-lg bg-[#EEF4FF] text-[#4F7DF6] hover:bg-[#D9E6FF] text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                  onClick={handleAddSection}
+                  className="px-3.5 py-2 rounded-xl bg-[#4F7DF6] text-white hover:bg-blue-600 text-xs font-extrabold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
                 >
-                  <Plus className="w-3.5 h-3.5" /> Add Lecture Module
+                  <FolderPlus className="w-4 h-4" /> + Add Section
                 </button>
               </div>
 
-              <div className="space-y-3">
-                {lectures.map((lec, idx) => (
-                  <div key={idx} className="p-4 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] space-y-3 relative">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#4F7DF6]">Lecture #{idx + 1}</span>
-                      {lectures.length > 1 && (
+              <div className="space-y-6">
+                {sections.map((sec, secIdx) => (
+                  <div key={secIdx} className="p-5 rounded-2xl border border-blue-200 bg-[#F8FAFC] space-y-4 relative shadow-sm">
+                    
+                    {/* Section Header Input */}
+                    <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Layers className="w-4 h-4 text-[#4F7DF6] shrink-0" />
+                        <input
+                          type="text"
+                          value={sec.sectionTitle}
+                          onChange={(e) => handleSectionTitleChange(secIdx, e.target.value)}
+                          placeholder="Section Title (e.g. Section 1: Core Mechanics)"
+                          className="w-full bg-white border border-[#E2E8F0] focus:border-[#4F7DF6] rounded-xl px-3 py-2 text-xs font-black text-[#1E293B] outline-none"
+                        />
+                      </div>
+                      {sections.length > 1 && (
                         <button
                           type="button"
-                          onClick={() => handleRemoveLecture(idx)}
-                          className="text-rose-500 hover:text-rose-700 p-1 rounded-md transition-colors cursor-pointer"
+                          onClick={() => handleRemoveSection(secIdx)}
+                          className="text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
+                          title="Remove Section"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="sm:col-span-2">
-                        <input
-                          type="text"
-                          placeholder="Lecture Title"
-                          value={lec.title}
-                          onChange={(e) => handleLectureChange(idx, 'title', e.target.value)}
-                          className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs font-bold text-[#1E293B] outline-none"
-                        />
-                      </div>
-                      <div>
-                        <input
-                          type="text"
-                          placeholder="Duration (e.g. 15 mins)"
-                          value={lec.duration}
-                          onChange={(e) => handleLectureChange(idx, 'duration', e.target.value)}
-                          className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-xs text-[#1E293B] outline-none"
-                        />
-                      </div>
+                    {/* Section Lectures List */}
+                    <div className="space-y-3 pl-2">
+                      {sec.lectures.map((lec, lecIdx) => (
+                        <div key={lecIdx} className="p-3 rounded-xl border border-slate-200 bg-white space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-extrabold text-[#4F7DF6]">Lecture #{lecIdx + 1}</span>
+                            {sec.lectures.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveLectureFromSection(secIdx, lecIdx)}
+                                className="text-slate-400 hover:text-rose-600 transition-colors"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <div className="sm:col-span-2">
+                              <input
+                                type="text"
+                                placeholder="Lecture Title"
+                                value={lec.title}
+                                onChange={(e) => handleLectureChange(secIdx, lecIdx, 'title', e.target.value)}
+                                className="w-full bg-[#F5F7FB] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs font-bold text-[#1E293B] outline-none"
+                              />
+                            </div>
+                            <div>
+                              <input
+                                type="text"
+                                placeholder="Duration (e.g. 15 mins)"
+                                value={lec.duration}
+                                onChange={(e) => handleLectureChange(secIdx, lecIdx, 'duration', e.target.value)}
+                                className="w-full bg-[#F5F7FB] border border-[#E2E8F0] rounded-lg px-3 py-1.5 text-xs text-[#1E293B] outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div className="flex items-center gap-2 bg-[#F5F7FB] border border-[#E2E8F0] rounded-lg px-3 py-1.5">
+                              <Video className="w-3.5 h-3.5 text-[#4F7DF6] shrink-0" />
+                              <input
+                                type="text"
+                                placeholder="Video Embed URL (YouTube/Vimeo)"
+                                value={lec.videoUrl}
+                                onChange={(e) => handleLectureChange(secIdx, lecIdx, 'videoUrl', e.target.value)}
+                                className="w-full text-xs text-[#1E293B] outline-none bg-transparent"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2 bg-[#F5F7FB] border border-[#E2E8F0] rounded-lg px-3 py-1.5">
+                              <FileText className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                              <input
+                                type="text"
+                                placeholder="Lecture Slides / PDF Resource URL"
+                                value={lec.pdfUrl}
+                                onChange={(e) => handleLectureChange(secIdx, lecIdx, 'pdfUrl', e.target.value)}
+                                className="w-full text-xs text-[#1E293B] outline-none bg-transparent"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => handleAddLectureToSection(secIdx)}
+                        className="px-3 py-1.5 rounded-lg bg-blue-50 text-[#4F7DF6] hover:bg-blue-100 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> + Add Lecture to {sec.sectionTitle.split(':')[0]}
+                      </button>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="flex items-center gap-2 bg-white border border-[#E2E8F0] rounded-lg px-3 py-1.5">
-                        <Video className="w-3.5 h-3.5 text-[#4F7DF6] shrink-0" />
-                        <input
-                          type="text"
-                          placeholder="Video Embed URL (YouTube/Vimeo)"
-                          value={lec.videoUrl}
-                          onChange={(e) => handleLectureChange(idx, 'videoUrl', e.target.value)}
-                          className="w-full text-xs text-[#1E293B] outline-none bg-transparent"
-                        />
-                      </div>
-                      <div className="flex items-center gap-2 bg-white border border-[#E2E8F0] rounded-lg px-3 py-1.5">
-                        <FileText className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        <input
-                          type="text"
-                          placeholder="Lecture Slides / PDF Resource URL"
-                          value={lec.pdfUrl}
-                          onChange={(e) => handleLectureChange(idx, 'pdfUrl', e.target.value)}
-                          className="w-full text-xs text-[#1E293B] outline-none bg-transparent"
-                        />
-                      </div>
-                    </div>
                   </div>
                 ))}
               </div>
@@ -322,7 +508,7 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
           <div className="pt-4 border-t border-[#E2E8F0] flex items-center justify-between gap-3">
             {step === 2 ? (
               <Button type="button" variant="outline" size="sm" onClick={() => setStep(1)}>
-                Back to Basic Info
+                Back to Basic Info & Category
               </Button>
             ) : (
               <span className="text-xs text-[#64748B]">Fill required details to proceed</span>
@@ -330,7 +516,7 @@ export function CourseUploadModal({ isOpen, onClose, onCourseCreated, currentUse
 
             {step === 1 ? (
               <Button type="button" variant="primary" size="sm" onClick={() => { if (title) setStep(2); else alert('Please provide a course title'); }}>
-                Next: Add Syllabus
+                Next: Configure Sections & Syllabus
               </Button>
             ) : (
               <Button type="submit" variant="accent" size="sm" icon={Sparkles} disabled={isSubmitting}>
