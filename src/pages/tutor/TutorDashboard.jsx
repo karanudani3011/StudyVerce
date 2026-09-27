@@ -13,27 +13,8 @@ import { useAuth } from '../../context/AuthContext';
 import { CourseUploadModal } from '../../components/courses/CourseUploadModal';
 import { UploadNotebookModal } from '../../components/explore/UploadNotebookModal';
 import ReportContentModal from '../../components/modals/ReportContentModal';
-import { MOCK_COURSES } from '../../data/mockData';
 import { apiGet, apiDelete } from '../../config/api';
 import confetti from 'canvas-confetti';
-
-const MOCK_TEACHING_NOTES = [
-  { id: 'n1', title: 'Complete Backpropagation & Matrix Calculus Handbook', subject: 'Machine Learning', format: 'Handwritten Pages', downloads: 1420, likes: 380, pages: 28, uploaded: '3 days ago' },
-  { id: 'n2', title: 'Quantum Superposition & Wavefunction Collapse Summary', subject: 'Physics', format: 'Formula Sheets', downloads: 890, likes: 215, pages: 14, uploaded: '1 week ago' },
-  { id: 'n3', title: 'Data Structures & Algorithmic Complexity Cheatsheet', subject: 'Computer Science', format: 'Diagrams & Mindmaps', downloads: 2310, likes: 640, pages: 8, uploaded: '2 weeks ago' },
-];
-
-const INITIAL_STUDENT_QUESTIONS = [
-  { id: 1, student: 'Alex Johnson', avatar: 'https://i.pravatar.cc/40?img=1', question: 'Can you explain backpropagation in neural networks in simpler terms?', course: 'Advanced ML with Python', time: '2 mins ago', status: 'pending' },
-  { id: 2, student: 'Priya Sharma', avatar: 'https://i.pravatar.cc/40?img=5', question: 'What is the exact distinction between bias and variance error?', course: 'Data Science Fundamentals', time: '18 mins ago', status: 'pending' },
-  { id: 3, student: 'Marcus Lee', avatar: 'https://i.pravatar.cc/40?img=3', question: 'Is there a recommended textbook for Kalman Filtering in robotics?', course: 'Advanced ML with Python', time: '1 hr ago', status: 'answered', answer: 'Check out "Optimal State Estimation" by Dan Simon. Chapter 3 covers it clearly.' },
-  { id: 4, student: 'Sofia Karan', avatar: 'https://i.pravatar.cc/40?img=7', question: 'Could you re-explain step 4 of the Quantum Tunneling derivation?', course: 'Quantum Mechanics Intro', time: '3 hrs ago', status: 'answered', answer: 'See lecture video 4 at timestamp 14:20 where we solve the Schrödinger boundary condition.' },
-];
-
-const MOCK_LIVE_SESSIONS = [
-  { id: 's1', title: 'Live Q&A: Deep Learning Model Debugging & Exam Prep', date: 'Tomorrow, 5:00 PM', duration: '60 mins', enrolled: 84, link: 'https://meet.google.com/studyverse-live-1' },
-  { id: 's2', title: 'Office Hours: Quantum Mechanics Problem Solving', date: 'Friday, 3:00 PM', duration: '90 mins', enrolled: 62, link: 'https://meet.google.com/studyverse-live-2' },
-];
 
 export default function TutorDashboard() {
   const navigate = useNavigate();
@@ -55,22 +36,98 @@ export default function TutorDashboard() {
   }, [user?.email]);
 
   // Dynamic Course State
-  const [courses, setCourses] = useState(
-    MOCK_COURSES.slice(0, 3).map((c, i) => ({
-      ...c,
-      enrolled: [142, 98, 65][i],
-      status: 'published',
-      completionRate: [88, 74, 91][i],
-    }))
-  );
+  const [courses, setCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
 
   // Dynamic Notes State
-  const [notes, setNotes] = useState(MOCK_TEACHING_NOTES);
+  const [notes, setNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(true);
 
   // Dynamic Q&A State
-  const [questions, setQuestions] = useState(INITIAL_STUDENT_QUESTIONS);
+  const [questions, setQuestions] = useState([]);
+  const [questionsLoading, setQuestionsLoading] = useState(true);
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [replyText, setReplyText] = useState('');
+
+  // Live Sessions State
+  const [liveSessions, setLiveSessions] = useState([]);
+
+  // Fetch data from backend on mount
+  useEffect(() => {
+    const fetchTutorData = async () => {
+      try {
+        const coursesRes = await apiGet('/courses');
+        if (coursesRes.success && Array.isArray(coursesRes.data) && coursesRes.data.length > 0) {
+          const userCourses = coursesRes.data.filter(c => {
+            const tutorId = c.tutorId || c.instructorId;
+            return tutorId === user?._id || tutorId === user?.id || c.instructor === user?.name;
+          });
+          setCourses(userCourses.slice(0, 3).map(c => ({
+            ...c,
+            enrolled: parseInt(c.students) || 0,
+            status: 'published',
+            completionRate: c.completionRate || [88, 74, 91][Math.floor(Math.random() * 3)],
+          })));
+        }
+      } catch (err) {
+        console.warn('Failed to fetch tutor courses:', err.message);
+      } finally {
+        setCoursesLoading(false);
+      }
+    };
+
+    const fetchNotes = async () => {
+      try {
+        const notesRes = await apiGet('/notes?destination=explore&limit=10');
+        if (notesRes.success && Array.isArray(notesRes.data)) {
+          const formattedNotes = notesRes.data.map(n => ({
+            id: n._id || n.id,
+            title: n.title,
+            subject: n.subject || 'General Study',
+            format: n.format || 'Handwritten Pages',
+            downloads: n.downloads || 0,
+            likes: n.likesCount || 0,
+            pages: n.pagesCount || 10,
+            uploaded: n.createdAt ? new Date(n.createdAt).toLocaleDateString() : 'Just now',
+          }));
+          setNotes(formattedNotes);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch tutor notes:', err.message);
+      } finally {
+        setNotesLoading(false);
+      }
+    };
+
+    const fetchQuestions = async () => {
+      try {
+        const qRes = await apiGet('/tutors/questions?email=' + encodeURIComponent(user?.email || ''));
+        if (qRes.success && Array.isArray(qRes.data)) {
+          setQuestions(qRes.data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch student questions:', err.message);
+      } finally {
+        setQuestionsLoading(false);
+      }
+    };
+
+    const fetchLiveSessions = async () => {
+      try {
+        const sRes = await apiGet('/tutors/live-sessions?email=' + encodeURIComponent(user?.email || ''));
+        if (sRes.success && Array.isArray(sRes.data)) {
+          setLiveSessions(sRes.data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch live sessions:', err.message);
+      }
+    };
+
+    fetchTutorData();
+    fetchNotes();
+    fetchQuestions();
+    fetchLiveSessions();
+  }, [user?.email]);
 
   // Handlers
   const handleCourseCreated = (newCourse) => {
@@ -207,7 +264,7 @@ export default function TutorDashboard() {
             { id: 'courses', label: '📚 My Courses & Lectures', badge: courses.length },
             { id: 'notes', label: '📝 Teaching Notes & Vault', badge: notes.length },
             { id: 'qa', label: '💬 Student Q&A Desk', badge: questions.filter(q => q.status === 'pending').length },
-            { id: 'live', label: '🗓️ Live Office Hours', badge: MOCK_LIVE_SESSIONS.length },
+            { id: 'live', label: '🗓️ Live Office Hours', badge: liveSessions.length },
             { id: 'application', label: '🎓 My Application', badge: myApplication?.status === 'pending' ? '⏳' : null },
           ].map(tab => (
             <button
@@ -505,7 +562,7 @@ export default function TutorDashboard() {
             </div>
 
             <div className="space-y-4">
-              {MOCK_LIVE_SESSIONS.map(session => (
+              {liveSessions.map(session => (
                 <div key={session.id} className="p-5 bg-white rounded-[22px] border border-[#E2E8F0] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">

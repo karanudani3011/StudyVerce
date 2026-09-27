@@ -9,22 +9,11 @@ import { apiPost, apiGet, apiPut } from '../config/api';
 
 const AuthContext = createContext(null);
 
-// Default fallback stats for fresh users
-const DEFAULT_USER_STATS = {
-  xp: 1250,
-  streak: 5,
-  dailyGoalMinutes: 60,
-  currentGoalMinutes: 45,
-  level: 'Intermediate',
-  followers: 0,
-  following: 0,
-};
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [notificationsCount, setNotificationsCount] = useState(4);
+  const [notificationsCount, setNotificationsCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('login');
 
@@ -51,9 +40,8 @@ export const AuthProvider = ({ children }) => {
             : (cachedUser?.role === 'tutor' || cachedUser?.role === 'faculty' ? '/tutors/me' : '/auth/me');
           const data = await apiGet(endpoint).catch(() => apiGet('/auth/me'));
           if (data && data.success && data.user) {
-            const updatedUser = { ...DEFAULT_USER_STATS, ...cachedUser, ...data.user };
-            setUser(updatedUser);
-            localStorage.setItem('sv_user', JSON.stringify(updatedUser));
+            setUser(data.user);
+            localStorage.setItem('sv_user', JSON.stringify(data.user));
             setIsAuthenticated(true);
           }
         } catch (error) {
@@ -77,34 +65,50 @@ export const AuthProvider = ({ children }) => {
   // Helper to persist user to state and localStorage
   const saveUserSession = (userData, token) => {
     if (token) localStorage.setItem('sv_token', token);
-    const fullUser = { ...DEFAULT_USER_STATS, ...userData };
-    setUser(fullUser);
-    localStorage.setItem('sv_user', JSON.stringify(fullUser));
+    setUser(userData);
+    localStorage.setItem('sv_user', JSON.stringify(userData));
     setIsAuthenticated(true);
-    return fullUser;
+    return userData;
   };
+
+  // ─── Update user profile from server ──────────────────────────────────────────
+  const refreshUser = useCallback(async () => {
+    const token = localStorage.getItem('sv_token');
+    if (!token) return null;
+    
+    try {
+      const endpoint = user?.role === 'admin' 
+        ? '/admin/me' 
+        : (user?.role === 'tutor' || user?.role === 'faculty' ? '/tutors/me' : '/auth/me');
+      const data = await apiGet(endpoint).catch(() => apiGet('/auth/me'));
+      if (data && data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem('sv_user', JSON.stringify(data.user));
+        return data.user;
+      }
+    } catch (error) {
+      console.warn('Failed to refresh user:', error.message);
+    }
+    return null;
+  }, [user?.role]);
+
+  // ─── Update local user state (for immediate UI feedback) ──────────────────────
+  const updateUser = useCallback((userData) => {
+    setUser(prev => prev ? ({ ...prev, ...userData }) : null);
+  }, []);
 
   // ─── Register with email/password ───────────────────────────────────────────
   const register = useCallback(async ({ name, email, password, role = 'student' }) => {
     try {
       const data = await apiPost('/auth/register', { name, email, password, role });
       if (data.success) {
+        if (data.requireOtp) {
+          return data;
+        }
         return saveUserSession(data.user, data.token);
       }
       throw new Error(data.message || 'Registration failed');
     } catch (err) {
-      if (err.message === 'Failed to fetch' || err.message.includes('fetch') || err.message.includes('NetworkError')) {
-        console.warn('Backend server offline/unreachable, falling back to local session');
-        const mockUser = {
-          id: 'usr_' + Date.now(),
-          name,
-          email,
-          username: `@${name.toLowerCase().replace(/\s+/g, '')}`,
-          role,
-          avatar: `https://i.pravatar.cc/150?u=${email}`,
-        };
-        return saveUserSession(mockUser, 'local_token_' + Date.now());
-      }
       throw err;
     }
   }, []);
@@ -114,28 +118,33 @@ export const AuthProvider = ({ children }) => {
     try {
       const data = await apiPost('/tutors/register', tutorData);
       if (data.success) {
+        if (data.requireOtp) {
+          return data;
+        }
         return saveUserSession(data.user, data.token);
       }
       throw new Error(data.message || 'Tutor registration failed');
     } catch (err) {
-      if (err.message === 'Failed to fetch' || err.message.includes('fetch') || err.message.includes('NetworkError')) {
-        console.warn('Backend server offline/unreachable, falling back to local tutor session');
-        const mockUser = {
-          id: 'tut_' + Date.now(),
-          name: tutorData.name,
-          email: tutorData.email,
-          username: `@${tutorData.name.toLowerCase().replace(/\s+/g, '')}`,
-          role: tutorData.role || 'tutor',
-          institution: tutorData.institution || 'Stanford University',
-          department: tutorData.department || 'Computer Science & AI',
-          title: tutorData.title || 'Faculty / Lead Instructor',
-          isVerified: true,
-          avatar: `https://i.pravatar.cc/150?u=${tutorData.email}`,
-        };
-        return saveUserSession(mockUser, 'local_tutor_token_' + Date.now());
-      }
       throw err;
     }
+  }, []);
+
+  // ─── Verify Registration OTP ───────────────────────────────────────────────
+  const verifyRegistrationOtp = useCallback(async ({ email, otp }) => {
+    const data = await apiPost('/auth/verify-otp', { email, otp });
+    if (data.success && data.user) {
+      return saveUserSession(data.user, data.token);
+    }
+    throw new Error(data.message || 'Verification failed');
+  }, []);
+
+  // ─── Resend Registration OTP ───────────────────────────────────────────────
+  const resendRegistrationOtp = useCallback(async ({ email }) => {
+    const data = await apiPost('/auth/resend-otp', { email });
+    if (data.success) {
+      return data;
+    }
+    throw new Error(data.message || 'Failed to resend verification code');
   }, []);
 
   // ─── Login with email/password ──────────────────────────────────────────────
@@ -147,18 +156,6 @@ export const AuthProvider = ({ children }) => {
       }
       throw new Error(data.message || 'Login failed');
     } catch (err) {
-      if (err.message === 'Failed to fetch' || err.message.includes('fetch') || err.message.includes('NetworkError')) {
-        console.warn('Backend server offline/unreachable, falling back to local session');
-        const mockUser = {
-          id: 'usr_demo',
-          name: email.split('@')[0].replace('.', ' '),
-          email,
-          username: `@${email.split('@')[0]}`,
-          role: email.includes('admin') ? 'admin' : email.includes('tutor') ? 'tutor' : 'student',
-          avatar: `https://i.pravatar.cc/150?u=${email}`,
-        };
-        return saveUserSession(mockUser, 'local_token_demo');
-      }
       throw err;
     }
   }, []);
@@ -172,21 +169,6 @@ export const AuthProvider = ({ children }) => {
       }
       throw new Error(data.message || 'Tutor login failed');
     } catch (err) {
-      if (err.message === 'Failed to fetch' || err.message.includes('fetch') || err.message.includes('NetworkError')) {
-        const mockUser = {
-          id: 'tut_demo',
-          name: email.split('@')[0],
-          email,
-          username: `@${email.split('@')[0]}`,
-          role: 'tutor',
-          institution: 'Stanford University',
-          department: 'Computer Science & AI',
-          title: 'Faculty / Lead Instructor',
-          isVerified: true,
-          avatar: `https://i.pravatar.cc/150?u=${email}`,
-        };
-        return saveUserSession(mockUser, 'local_tutor_token_demo');
-      }
       throw err;
     }
   }, []);
@@ -210,13 +192,13 @@ export const AuthProvider = ({ children }) => {
       photoURL: firebaseUser.photoURL,
     });
 
-    if (data.success) {
-      localStorage.setItem('sv_token', data.token);
-      setUser({ ...DEFAULT_USER_STATS, ...data.user });
-      setIsAuthenticated(true);
-      return data.user;
-    }
-    throw new Error('Social auth sync failed');
+if (data.success) {
+       localStorage.setItem('sv_token', data.token);
+       setUser(data.user);
+       setIsAuthenticated(true);
+       return data.user;
+     }
+     throw new Error('Social auth sync failed');
   }, []);
 
   // ─── Forgot Password — sends OTP email ─────────────────────────────────────
@@ -280,29 +262,19 @@ export const AuthProvider = ({ children }) => {
       }
       throw new Error(data.message || 'Admin login failed');
     } catch (err) {
-      if (err.message === 'Failed to fetch' || err.message.includes('fetch') || err.message.includes('NetworkError')) {
-        if (adminId === 'admin' && password === 'admin123') {
-          const mockAdmin = {
-            id: 'admin_root',
-            adminId: 'admin',
-            name: 'System Admin',
-            role: 'admin',
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80',
-          };
-          return saveUserSession(mockAdmin, 'local_admin_token');
-        }
-      }
-      throw err;
+throw err;
     }
   }, []);
 
   return (
     <AuthContext.Provider value={{
       user, setUser,
-      isAuthenticated, login, register, registerTutor, loginTutor, loginAdmin, logout, loginWithProvider,
+      isAuthenticated, login, register, registerTutor, verifyRegistrationOtp, resendRegistrationOtp, loginTutor, loginAdmin, logout, loginWithProvider,
       notificationsCount, setNotificationsCount,
       searchQuery, setSearchQuery,
       addXP,
+      updateUser,
+      refreshUser,
       updateUserProfile,
       toggleCourseWishlist,
       forgotPassword,

@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { MOCK_COMMUNITIES } from '../data/mockData';
+
 import { apiGet, apiPost, apiDelete } from '../config/api';
 
 const CommunityContext = createContext(null);
 
 const STORAGE_KEY = 'sv_communities_data';
 
-// Helper to normalize initial communities from mockData
+// Helper to normalize initial communities from localStorage only
 const getInitialCommunities = () => {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
@@ -16,20 +16,7 @@ const getInitialCommunities = () => {
       console.error('Failed to parse communities from storage', e);
     }
   }
-
-  return MOCK_COMMUNITIES.map((c, idx) => {
-    let memberCount = 8;
-    if (idx === 1) memberCount = 10;
-    if (idx === 2) memberCount = 5;
-
-    return {
-      ...c,
-      members: memberCount,
-      membersCap: 10,
-      joiningFee: 199,
-      creatorName: idx === 0 ? 'Dr. Sarah Chen' : idx === 1 ? 'Prof. Marcus Vance' : 'Topper Community',
-    };
-  });
+  return [];
 };
 
 export const CommunityProvider = ({ children }) => {

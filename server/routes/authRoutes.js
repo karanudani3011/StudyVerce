@@ -1,11 +1,26 @@
 import express from 'express';
-import { registerUser, loginUser, googleAuthSync, getMe, forgotPassword, resetPassword } from '../controllers/authController.js';
+import { 
+  registerUser, 
+  verifyRegistrationOtp, 
+  resendRegistrationOtp, 
+  loginUser, 
+  googleAuthSync, 
+  getMe, 
+  forgotPassword, 
+  resetPassword 
+} from '../controllers/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// POST /api/auth/register
+// POST /api/auth/register (starts registration & sends OTP)
 router.post('/register', registerUser);
+
+// POST /api/auth/verify-otp (verifies OTP & activates account)
+router.post('/verify-otp', verifyRegistrationOtp);
+
+// POST /api/auth/resend-otp (resends OTP with 30s cooldown)
+router.post('/resend-otp', resendRegistrationOtp);
 
 // POST /api/auth/login
 router.post('/login', loginUser);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Heart,
@@ -22,16 +22,33 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
 import { Modal } from '../components/ui/Modal';
-import { MOCK_FEED_POSTS } from '../data/mockData';
+import { apiGet } from '../config/api';
 
 export const FeedPage = () => {
   const { addXP } = useAuth();
-  const [posts, setPosts] = useState(MOCK_FEED_POSTS);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeQuizPost, setActiveQuizPost] = useState(null);
   const [activeNotesPost, setActiveNotesPost] = useState(null);
   const [activeSummaryPost, setActiveSummaryPost] = useState(null);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const res = await apiGet('/posts');
+        if (res.success && Array.isArray(res.data)) {
+          setPosts(res.data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch feed posts:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPosts();
+  }, []);
 
   const toggleLike = (postId) => {
     setPosts(prev => prev.map(p => {

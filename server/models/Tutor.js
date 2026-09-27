@@ -82,6 +82,40 @@ const tutorSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Course'
     }],
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    otpHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    otpExpiresAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+    otpAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    otpLastSentAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+    passwordResetOtp: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    passwordResetOtpExpiry: {
+      type: Date,
+      default: null,
+      select: false,
+    },
   },
   {
     timestamps: true,

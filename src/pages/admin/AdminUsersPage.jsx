@@ -143,10 +143,10 @@ export default function AdminUsersPage() {
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 font-bold text-[10px]">
-                            <Award className="w-3 h-3" /> {u.xp || 1250} XP
+                            <Award className="w-3 h-3" /> {u.xp || 0} XP
                           </span>
                           <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-orange-500/10 text-orange-400 font-bold text-[10px]">
-                            <Flame className="w-3 h-3" /> {u.streak || 5}d
+                            <Flame className="w-3 h-3" /> {u.streak || 0}d
                           </span>
                         </div>
                       </td>

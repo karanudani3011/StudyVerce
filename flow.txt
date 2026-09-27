@@ -46,7 +46,7 @@ A. Admin Authentication & Entry Flow
 B. Cyber Command Panel & Platform Intelligence (`/admin/dashboard`)
    1. Real-Time Platform KPI Metrics:
       - Total Student Users (Fetched from `/api/admin/stats`).
-      - Total Faculty & Tutors (`@faculty.studyverse.com` field).
+      - Total Faculty & Tutors (Verified Educators directory).
       - Active Study Communities count.
       - Published Course count.
    2. System Control Actions:
@@ -66,7 +66,7 @@ C. Student Users Directory Management (`/admin/users`)
    4. Moderation Actions: Deactivate, suspend, or delete student accounts if needed.
 
 D. Isolated Faculty Directory Management (`/admin/faculty`)
-   1. Domain-Validated Educator List: Displays faculty members verified via official domain (`@faculty.studyverse.com`).
+   1. Verified Educator List: Displays faculty members verified via email OTP authentication.
    2. Educator Inspection: View assigned courses, total enrolled students, and teaching notes published.
    3. Faculty Actions: Revoke faculty status, audit educator permissions, or clean legacy records.
 
@@ -119,7 +119,7 @@ Route Path               Tab Identifier        Component               Access
 --------------------------------------------------------------------------------
 
 A. Educator Onboarding & Authentication
-   1. Direct Registration / Login: Log in with an approved `@faculty.studyverse.com` credential.
+   1. Direct Registration / Login: Register with any valid email and verify with 6-digit OTP.
    2. Or Student Promotion: Submit application via `/apply-tutor` -> Admin approves -> Role changes to `tutor`.
    3. Redirect to Teaching Studio: User enters `/tutor/dashboard`.
 

@@ -8,47 +8,10 @@ import { Avatar } from '../components/ui/Avatar';
 
 export const AITutorPage = () => {
   const { user } = useAuth();
-  const [messages, setMessages] = useState([
-    {
-      id: 'm1',
-      sender: 'ai',
-      text: 'Hello! I\'m your 24/7 StudyVerse AI Tutor. Ask me anything — calculus formulas, code debugging, essay outlines, or practice quizzes.',
-      timestamp: '10:00 AM'
-    },
-    {
-      id: 'm2',
-      sender: 'user',
-      text: 'Can you explain Quantum Superposition with a math formula?',
-      timestamp: '10:01 AM'
-    },
-    {
-      id: 'm3',
-      sender: 'ai',
-      text: 'Of course! In quantum mechanics, superposition means a system exists in all possible states simultaneously until measured.\n\nThe quantum state |Ψ⟩ is represented as:',
-      mathSnippet: '|Ψ⟩ = α|0⟩ + β|1⟩   where   |α|² + |β|² = 1',
-      codeSnippet: `from qiskit import QuantumCircuit
-
-qc = QuantumCircuit(1, 1)
-qc.h(0)   # Hadamard gate → superposition
-qc.measure(0, 0)
-print(qc)`,
-      timestamp: '10:01 AM'
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
 
-  const chatHistory = [
-    { title: 'Quantum Superposition & Math', time: 'Today' },
-    { title: 'Neural Network Backpropagation', time: 'Yesterday' },
-    { title: 'UPSC Indian Polity Notes', time: '3 days ago' },
-    { title: 'C++ Binary Tree Traversal', time: '1 week ago' },
-  ];
-
-  const chips = [
-    'Explain Calculus Chain Rule',
-    'Generate 5 Python quiz questions',
-    'Summarize Quantum Physics notes'
-  ];
+  
 
   const handleSend = (e) => {
     e.preventDefault();
@@ -77,7 +40,7 @@ print(qc)`,
               <div>
                 <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] mb-2">Recent Chats</h4>
                 <div className="space-y-0.5">
-                  {chatHistory.map((chat, idx) => (
+                  {[].map((chat, idx) => (
                     <button key={idx} className="w-full text-left p-2.5 rounded-[12px] text-xs font-medium text-[#64748B] hover:bg-[#F5F7FB] hover:text-[#1E293B] truncate transition-colors">
                       💬 {chat.title}
                     </button>
@@ -145,7 +108,7 @@ print(qc)`,
 
             {/* Quick Prompt Chips */}
             <div className="flex items-center gap-2 overflow-x-auto py-3 no-scrollbar">
-              {chips.map((chip, i) => (
+              {[].map((chip, i) => (
                 <button
                   key={i}
                   onClick={() => setInput(chip)}

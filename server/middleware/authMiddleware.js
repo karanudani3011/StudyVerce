@@ -51,3 +51,26 @@ export const protect = async (req, res, next) => {
   }
 };
 
+export const optionalAuth = async (req, res, next) => {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    try {
+      const token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret123');
+
+      if (decoded.role === 'admin') {
+        req.user = await Admin.findById(decoded.id).select('-password');
+      } else if (decoded.isTutor) {
+        req.user = await Tutor.findById(decoded.id).select('-password');
+      } else {
+        req.user = await User.findById(decoded.id).select('-password');
+      }
+    } catch (error) {
+      // ignore invalid token for optional auth
+    }
+  }
+  next();
+};
+

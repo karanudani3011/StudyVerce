@@ -2,7 +2,6 @@ import React from 'react';
 import { Bell, Heart, Trophy, MessageCircle } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Badge } from '../../components/ui/index.jsx';
-import { MOCK_NOTIFICATIONS } from '../../data/mockData';
 
 export default function NotificationsPage() {
   return (
@@ -14,7 +13,7 @@ export default function NotificationsPage() {
         </div>
 
         <Card className="divide-y divide-[#EDF2F7] p-0">
-          {MOCK_NOTIFICATIONS.map(n => (
+          {[].map(n => (
             <div key={n.id} className="p-4 flex gap-4 hover:bg-[#F8FAFC] transition-colors items-center">
               <span className="text-2xl">{n.icon}</span>
               <div className="flex-1">

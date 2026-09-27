@@ -1,16 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Award, Flame, Zap, Edit3, Shield, BookOpen, Bookmark, Camera } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Avatar, Badge, Tabs } from '../../components/ui/index.jsx';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../context/AuthContext';
-import { MOCK_FEED_POSTS } from '../../data/mockData';
+import { apiGet } from '../../config/api';
 
 export default function ProfilePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState('posts');
+  const [userPosts, setUserPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const res = await apiGet('/posts');
+        if (res.success && Array.isArray(res.data)) {
+          setUserPosts(res.data.filter(p => p.teacher?.name === user?.name));
+        }
+      } catch (err) {
+        console.warn('Failed to fetch profile posts:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPosts();
+  }, [user?.name]);
 
   const tabs = [
     { id: 'posts', label: 'My Notes & Posts', count: user.postsCount },
@@ -83,7 +101,7 @@ export default function ProfilePage() {
         {/* Tab Content */}
         {tab === 'posts' && (
           <div className="space-y-4">
-            {MOCK_FEED_POSTS.map(post => (
+            {(loading ? [] : userPosts).map(post => (
               <Card key={post.id} className="space-y-3">
                 <Badge variant="primary" size="sm">{post.subject}</Badge>
                 <h3 className="text-sm font-bold text-[#1E293B]">{post.caption}</h3>

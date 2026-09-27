@@ -20,7 +20,7 @@ import {
 import { apiGet, apiDelete } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 import { CourseUploadModal } from '../../components/courses/CourseUploadModal';
-import { MOCK_COURSES } from '../../data/mockData';
+
 
 export default function AdminDashboard() {
   const { user, setActiveTab } = useAuth();
@@ -39,7 +39,7 @@ export default function AdminDashboard() {
     totalCommunities: 0,
     totalCourses: 0,
   });
-  const [adminCourses, setAdminCourses] = useState(MOCK_COURSES);
+  const [adminCourses, setAdminCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [purging, setPurging] = useState(false);
   const [purgeMsg, setPurgeMsg] = useState('');
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
           image: c.image,
           category: c.category,
         }));
-        setAdminCourses([...formatted, ...MOCK_COURSES]);
+        setAdminCourses(formatted);
       }
     } catch (err) {
       console.warn('Failed to fetch admin stats, using live fallback:', err.message);
@@ -86,7 +86,7 @@ export default function AdminDashboard() {
   }, []);
 
   const handleFacultyPurge = async () => {
-    if (!window.confirm('Are you sure you want to remove ALL faculty accounts from the database? Users with @faculty.studyverse.com can re-register.')) {
+    if (!window.confirm('Are you sure you want to remove ALL faculty accounts from the database? This action cannot be undone.')) {
       return;
     }
     setPurging(true);
@@ -106,8 +106,8 @@ export default function AdminDashboard() {
   const SUGGESTIONS = [
     {
       id: 1,
-      title: 'Enforce @faculty.studyverse.com Validation',
-      desc: 'All faculty accounts now require official domain validation. Review non-compliant legacy accounts.',
+      title: 'Review Faculty & Educator Accounts',
+      desc: 'Review verified faculty and educators across registered institutions.',
       type: 'security',
       action: 'Check Faculty List',
       tab: 'admin-faculty',
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
             {
               label: 'Total Faculty & Tutors',
               value: loading ? '...' : stats.totalFaculty,
-              sub: '@faculty.studyverse.com Field',
+              sub: 'Verified Educators',
               icon: GraduationCap,
               color: 'text-teal-400',
               borderColor: 'border-teal-500/30',
@@ -290,7 +290,7 @@ export default function AdminDashboard() {
                 Isolated Field
               </span>
               <h3 className="text-xl font-black text-white tracking-tight">Faculty &amp; Educator Portal</h3>
-              <p className="text-xs text-slate-300 max-w-sm">Manage verified @faculty.studyverse.com educators separately from students.</p>
+              <p className="text-xs text-slate-300 max-w-sm">Manage verified faculty and educators separately from students.</p>
             </div>
             <button
               onClick={() => handleNav('admin-faculty', '/admin/faculty')}

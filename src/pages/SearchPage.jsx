@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Sidebar } from '../components/layout/Sidebar';
@@ -6,11 +6,15 @@ import { TopHeader } from '../components/layout/TopHeader';
 import { RightSidebar } from '../components/layout/RightSidebar';
 import { Card } from '../components/ui/Card';
 import { Tabs } from '../components/ui/Tabs';
-import { MOCK_FEED_POSTS, MOCK_COURSES, MOCK_COMMUNITIES } from '../data/mockData';
+import { apiGet } from '../config/api';
 
 export const SearchPage = () => {
   const { searchQuery } = useAuth();
   const [searchCategory, setSearchCategory] = useState('all');
+  const [posts, setPosts] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [communities, setCommunities] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const tabs = [
     { id: 'all', label: 'All Results' },
@@ -18,6 +22,30 @@ export const SearchPage = () => {
     { id: 'courses', label: 'Courses' },
     { id: 'communities', label: 'Communities' },
   ];
+
+  useEffect(() => {
+    const fetchSearchData = async () => {
+      try {
+        const [postsRes, coursesRes, commRes] = await Promise.all([
+          apiGet('/posts'),
+          apiGet('/courses'),
+          apiGet('/communities'),
+        ]);
+        if (postsRes.success && Array.isArray(postsRes.data)) setPosts(postsRes.data);
+        if (coursesRes.success && Array.isArray(coursesRes.data)) setCourses(coursesRes.data);
+        if (commRes.success && Array.isArray(commRes.data)) setCommunities(commRes.data);
+      } catch (err) {
+        console.warn('Failed to fetch search data:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSearchData();
+  }, []);
+
+  const safePosts = loading ? [] : posts;
+  const safeCourses = loading ? [] : courses;
+  const safeCommunities = loading ? [] : communities;
 
   return (
     <div className="min-h-screen flex bg-[#F8FAFC] text-[#1E293B]">
@@ -35,7 +63,7 @@ export const SearchPage = () => {
           <Tabs tabs={tabs} activeTab={searchCategory} onChange={setSearchCategory} variant="pills" />
 
           <div className="space-y-4">
-            {(searchCategory === 'all' || searchCategory === 'posts') && MOCK_FEED_POSTS.map((post) => (
+            {(searchCategory === 'all' || searchCategory === 'posts') && safePosts.map((post) => (
               <Card key={post.id} hover className="p-4 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-[#4F7DF6]">{post.subject}</span>
@@ -46,7 +74,7 @@ export const SearchPage = () => {
               </Card>
             ))}
 
-            {(searchCategory === 'all' || searchCategory === 'courses') && MOCK_COURSES.map((course) => (
+            {(searchCategory === 'all' || searchCategory === 'courses') && safeCourses.map((course) => (
               <Card key={course.id} hover className="p-4 flex items-center gap-4">
                 <img src={course.image} alt={course.title} className="w-16 h-16 object-cover rounded-[12px] border border-[#E2E8F0] shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -57,7 +85,7 @@ export const SearchPage = () => {
               </Card>
             ))}
 
-            {(searchCategory === 'all' || searchCategory === 'communities') && MOCK_COMMUNITIES.map((comm) => (
+            {(searchCategory === 'all' || searchCategory === 'communities') && safeCommunities.map((comm) => (
               <Card key={comm.id} hover className="p-4 flex items-center gap-4">
                 <span className="text-3xl">{comm.icon}</span>
                 <div className="flex-1 min-w-0">

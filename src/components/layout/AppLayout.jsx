@@ -10,7 +10,6 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Avatar, Badge } from '../ui/index.jsx';
-import { MOCK_NOTIFICATIONS } from '../../data/mockData';
 
 // Helper to get sidebar navigation links based on user role
 const getSidebarNav = (role) => {
@@ -217,18 +216,17 @@ export const TopHeader = ({ onMenuToggle }) => {
                   <button onClick={() => { navigate('/notifications'); setShowNotif(false); }} className="text-xs font-semibold text-[#4F7DF6] hover:underline">View All</button>
                 </div>
                 <div className="max-h-72 overflow-y-auto divide-y divide-[#EDF2F7]">
-                  {MOCK_NOTIFICATIONS.slice(0, 4).map(n => (
-                    <div key={n.id} onClick={() => { navigate('/notifications'); setShowNotif(false); }}
+                  {notificationsCount > 0 ? notificationsCount.map((n, i) => (
+                    <div key={i} onClick={() => { navigate('/notifications'); setShowNotif(false); }}
                       className="flex gap-3 px-4 py-3 hover:bg-[#F8FAFC] cursor-pointer transition-colors">
-                      <span className="text-xl shrink-0">{n.icon}</span>
+                      <span className="text-xl shrink-0">🔔</span>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-[#1E293B] truncate">{n.title}</p>
-                        <p className="text-[11px] text-[#64748B] line-clamp-2 mt-0.5">{n.desc}</p>
-                        <span className="text-[10px] text-[#94A3B8]">{n.time}</span>
+                        <p className="text-xs font-semibold text-[#1E293B] truncate">Notification</p>
+                        <p className="text-[11px] text-[#64748B] line-clamp-2 mt-0.5">New activity detected</p>
+                        <span className="text-[10px] text-[#94A3B8]">Just now</span>
                       </div>
-                      {!n.read && <div className="w-2 h-2 bg-[#4F7DF6] rounded-full mt-1 shrink-0" />}
                     </div>
-                  ))}
+                  )) : <div className="text-center py-4 text-[#64748B] text-xs">No notifications</div>}
                 </div>
               </motion.div>
             )}

@@ -13,9 +13,17 @@ import courseRoutes from './routes/courseRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
+import studySessionRoutes from './routes/studySessionRoutes.js';
+import quizRoutes from './routes/quizRoutes.js';
 
 import adminRoutes from './routes/adminRoutes.js';
+import postRoutes from './routes/postRoutes.js';
+import leaderboardRoutes from './routes/leaderboardRoutes.js';
+import searchRoutes from './routes/searchRoutes.js';
 import { seedDefaultAdmin } from './controllers/adminController.js';
+import { seedDefaultQuizzes } from './config/seedQuizzes.js';
+import { getDailyTasks } from './controllers/userController.js';
+import { protect } from './middleware/authMiddleware.js';
 
 // ─── Load Environment Variables ──────────────────────────────────────────────
 dotenv.config();
@@ -49,6 +57,12 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/study-sessions', studySessionRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/posts', postRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/search', searchRoutes);
+app.get('/api/study-tasks', protect, getDailyTasks);
 
 // ─── Health Check ───────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -76,4 +90,5 @@ app.listen(PORT, async () => {
   // Connect to MongoDB after server is listening
   await connectDB();
   await seedDefaultAdmin();
+  await seedDefaultQuizzes();
 });

@@ -271,7 +271,7 @@ export const updateApplicationStatus = async (req, res) => {
       let tutor = await Tutor.findOne({ email: cleanEmail });
       if (!tutor) {
         const username = `@${application.fullName.toLowerCase().replace(/\s+/g, '')}${Math.floor(100 + Math.random() * 900)}`;
-        const isFacultyEmail = cleanEmail.endsWith('@faculty.studyverse.com');
+        const assignedRole = application.role || 'faculty';
 
         tutor = await Tutor.create({
           name: application.fullName,
@@ -281,19 +281,22 @@ export const updateApplicationStatus = async (req, res) => {
           institution: application.institution,
           department: application.department || 'Academic Department',
           title: application.title || 'Verified Educator',
-          role: isFacultyEmail ? 'faculty' : 'tutor',
+          role: assignedRole,
           bio: application.bio,
           isVerified: true,
+          emailVerified: true,
         });
       } else {
         tutor.isVerified = true;
+        tutor.emailVerified = true;
         await tutor.save();
       }
 
       // Also update user record if exists
       const user = await User.findOne({ email: cleanEmail });
       if (user) {
-        user.role = cleanEmail.endsWith('@faculty.studyverse.com') ? 'faculty' : 'tutor';
+        user.role = 'faculty';
+        user.emailVerified = true;
         await user.save();
       }
     }

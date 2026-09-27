@@ -2,7 +2,6 @@ import React from 'react';
 import { Award, CheckCircle2, Lock } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Badge } from '../../components/ui/index.jsx';
-import { MOCK_ACHIEVEMENTS } from '../../data/mockData';
 
 export default function AchievementsPage() {
   return (
@@ -14,7 +13,7 @@ export default function AchievementsPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {MOCK_ACHIEVEMENTS.map(ach => (
+          {[].map(ach => (
             <Card key={ach.id} className={`p-4 space-y-3 ${!ach.earned ? 'opacity-60 bg-[#F8FAFC]' : ''}`}>
               <div className="flex items-center justify-between">
                 <span className="text-3xl">{ach.icon}</span>

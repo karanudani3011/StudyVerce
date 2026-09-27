@@ -44,7 +44,7 @@ export default function AdminFacultyPage() {
   };
 
   const handlePurgeAll = async () => {
-    if (!window.confirm('Wipe ALL faculty accounts from database? Only validated @faculty.studyverse.com accounts will remain.')) return;
+    if (!window.confirm('Wipe ALL faculty accounts from database? This action cannot be undone.')) return;
     setLoading(true);
     try {
       const data = await apiDelete('/admin/faculty-cleanup');
@@ -78,10 +78,10 @@ export default function AdminFacultyPage() {
             </div>
             <div>
               <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase">
-                Separate Field
+                Dedicated Directory
               </span>
               <h1 className="text-2xl font-black text-white">Faculty &amp; Tutors Management</h1>
-              <p className="text-xs text-slate-400">Validated @faculty.studyverse.com educators and course instructors</p>
+              <p className="text-xs text-slate-400">Verified educators, faculty members, and course instructors</p>
             </div>
           </div>
 
@@ -105,8 +105,7 @@ export default function AdminFacultyPage() {
         <div className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-800/40 text-xs text-indigo-200 flex items-center gap-3">
           <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" />
           <div>
-            <span className="font-bold text-white">Faculty Email Requirement:</span> Accounts must use an official{' '}
-            <code className="bg-slate-950 text-indigo-300 px-1.5 py-0.5 rounded font-mono font-bold">@faculty.studyverse.com</code> email. Accounts violating this domain are flagged.
+            <span className="font-bold text-white">Faculty &amp; Tutor Directory:</span> Verified educators across all institutions and domains. All accounts undergo mandatory email OTP authentication.
           </div>
         </div>
 
@@ -139,7 +138,7 @@ export default function AdminFacultyPage() {
             <div className="p-12 text-center space-y-2">
               <GraduationCap className="w-8 h-8 text-slate-600 mx-auto" />
               <p className="text-sm font-bold text-white">No faculty accounts found in database</p>
-              <p className="text-xs text-slate-500">Faculty signing up with @faculty.studyverse.com will appear in this separate field.</p>
+              <p className="text-xs text-slate-500">Registered faculty and educator accounts will appear in this directory.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -147,7 +146,7 @@ export default function AdminFacultyPage() {
                 <thead className="bg-slate-950 text-slate-400 uppercase font-black text-[10px] tracking-wider border-b border-slate-800">
                   <tr>
                     <th className="p-4">Faculty Member</th>
-                    <th className="p-4">Email &amp; Domain Status</th>
+                    <th className="p-4">Email Address</th>
                     <th className="p-4">Department &amp; Title</th>
                     <th className="p-4">Institution</th>
                     <th className="p-4">Status</th>
@@ -156,7 +155,7 @@ export default function AdminFacultyPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-800/60 text-slate-300">
                   {filteredFaculty.map((f) => {
-                    const isDomainValid = f.email?.toLowerCase().endsWith('@faculty.studyverse.com');
+                    const isEmailVerified = f.emailVerified !== false;
                     return (
                       <tr key={f._id} className="hover:bg-slate-800/40 transition-colors">
                         <td className="p-4">
@@ -181,13 +180,13 @@ export default function AdminFacultyPage() {
                         </td>
                         <td className="p-4 font-mono">
                           <p className="text-slate-300 font-bold">{f.email}</p>
-                          {isDomainValid ? (
+                          {isEmailVerified ? (
                             <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-bold">
-                              ✓ Verified Domain (@faculty.studyverse.com)
+                              ✓ Email Verified
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-rose-400 font-bold">
-                              ⚠️ Non-Faculty Domain
+                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-400 font-bold">
+                              ⏳ Pending OTP Verification
                             </span>
                           )}
                         </td>

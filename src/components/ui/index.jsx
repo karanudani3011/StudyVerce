@@ -243,3 +243,25 @@ export const Accordion = ({ items }) => {
 };
 
 import { ChevronDown } from 'lucide-react';
+
+// ─── Button ────────────────────────────────────────────────────────────
+export const Button = ({ children, variant = 'primary', size = 'md', icon, onClick, className = '', ...props }) => {
+  const variants = {
+    primary: 'bg-[#4F7DF6] hover:bg-blue-600 text-white',
+    secondary: 'bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-slate-50',
+    accent: 'bg-purple-600 hover:bg-purple-700 text-white',
+    ghost: 'bg-transparent text-[#64748B] hover:bg-slate-100',
+    danger: 'bg-rose-500 hover:bg-rose-600 text-white',
+  };
+  const sizes = { sm: 'px-3 py-1.5 text-xs', md: 'px-4 py-2 text-sm', lg: 'px-6 py-3 text-base' };
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center justify-center gap-1.5 font-semibold rounded-[14px] transition-all cursor-pointer border ${variants[variant]} ${sizes[size]} ${className}`}
+      {...props}
+    >
+      {icon && <span>{icon}</span>}
+      {children}
+    </button>
+  );
+};

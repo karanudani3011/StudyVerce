@@ -135,22 +135,26 @@ export const AuthPages = () => {
     if (!termsAccepted) { setError('Please accept the Terms of Service to continue.'); return; }
 
     const cleanEmail = email.trim().toLowerCase();
-
-    if (accountType === 'faculty' || cleanEmail.endsWith('@faculty.studyverse.com')) {
-      if (!cleanEmail.endsWith('@faculty.studyverse.com')) {
-        setError('Faculty accounts MUST use an official @faculty.studyverse.com email address.');
-        return;
-      }
+    const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+    if (!EMAIL_REGEX.test(cleanEmail)) {
+      setError('Please enter a valid email address.');
+      return;
     }
 
     setLoading(true);
     try {
+      let res;
       if (accountType === 'tutor' || accountType === 'faculty') {
-        await registerTutor({ name, email: cleanEmail, password, role: accountType === 'faculty' ? 'faculty' : 'tutor' });
-        setActiveTab('tutor-dashboard');
+        res = await registerTutor({ name, email: cleanEmail, password, role: accountType === 'faculty' ? 'faculty' : 'tutor' });
       } else {
-        await register({ name, email: cleanEmail, password, role: 'student' });
-        setActiveTab('dashboard');
+        res = await register({ name, email: cleanEmail, password, role: 'student' });
+      }
+
+      if (res?.requireOtp) {
+        setSuccess('A 6-digit verification code has been sent to your email!');
+        window.location.href = '/register';
+      } else {
+        setActiveTab(accountType === 'tutor' || accountType === 'faculty' ? 'tutor-dashboard' : 'dashboard');
       }
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -365,7 +369,7 @@ export const AuthPages = () => {
                   </div>
 
                   <Input label="Full Name" placeholder="Alex Johnson" icon={User} value={name} onChange={(e) => setName(e.target.value)} required />
-                  <Input label={accountType === 'tutor' ? 'Faculty / Official Email' : 'Student Email'} type="email" placeholder={accountType === 'tutor' ? 'prof.alex@university.edu' : 'alex@university.edu'} icon={Mail} value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input label={accountType === 'tutor' ? 'Tutor / Faculty Email' : 'Student Email'} type="email" placeholder={accountType === 'tutor' ? 'prof.alex@gmail.com' : 'alex@stanford.edu'} icon={Mail} value={email} onChange={(e) => setEmail(e.target.value)} required />
 
                   <div>
                     <Input label="Create Password" type="password" placeholder="••••••••" icon={Lock} value={password} onChange={(e) => setPassword(e.target.value)} required />

@@ -1,15 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Heart, MessageCircle, Bookmark, Share2, Sparkles, Send } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Avatar, Badge } from '../../components/ui/index.jsx';
 import { Button } from '../../components/ui/Button';
-import { MOCK_FEED_POSTS } from '../../data/mockData';
+import { apiGet } from '../../config/api';
 
 export default function PostDetails() {
   const { postId } = useParams();
   const navigate = useNavigate();
-  const post = MOCK_FEED_POSTS.find(p => p.id === postId) || MOCK_FEED_POSTS[0];
+  const [post, setPost] = useState(null);
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        const res = await apiGet('/posts');
+        if (res.success && Array.isArray(res.data)) {
+          const found = res.data.find(p => p.id === postId || p._id === postId);
+          setPost(found || res.data[0] || null);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch post:', err.message);
+      }
+    };
+    fetchPost();
+  }, [postId]);
+
+  if (!post) return <AppLayout><div className="p-6 text-center text-[#64748B]">Loading...</div></AppLayout>;
   const [commentText, setCommentText] = useState('');
   const [comments, setComments] = useState([
     { id: 1, user: 'Alex Johnson', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100', text: 'This explanation of chain rule in backpropagation made it click for me!', time: '1 hr ago' },

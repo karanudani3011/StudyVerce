@@ -1,14 +1,42 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, Filter, BookOpen, Users, User, FileText } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Badge, Avatar, EmptyState } from '../../components/ui/index.jsx';
-import { MOCK_COURSES, MOCK_FEED_POSTS, MOCK_TEACHERS } from '../../data/mockData';
+import { apiGet } from '../../config/api';
 
 export default function SearchPage() {
   const [params] = useSearchParams();
   const query = params.get('q') || '';
   const navigate = useNavigate();
+  const [courses, setCourses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const cRes = await apiGet('/courses');
+        if (cRes.success && Array.isArray(cRes.data)) setCourses(cRes.data);
+      } catch (err) {
+        console.warn('Failed to fetch courses:', err.message);
+      }
+      try {
+        const uRes = await apiGet('/users');
+        if (uRes.success && Array.isArray(uRes.data)) {
+          const tutors = uRes.data.filter(u => u.role === 'tutor' || u.role === 'faculty');
+          setTeachers(tutors);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch teachers:', err.message);
+      }
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  const safeCourses = loading ? [] : courses;
+  const safeTeachers = loading ? [] : teachers;
 
   return (
     <AppLayout>
@@ -25,7 +53,7 @@ export default function SearchPage() {
           <div className="space-y-3">
             <h2 className="text-sm font-bold text-[#1E293B] uppercase tracking-wider text-[#94A3B8]">Courses</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {MOCK_COURSES.map(course => (
+              {safeCourses.map(course => (
                 <Card key={course.id} hover onClick={() => navigate(`/courses/${course.id}`)} className="flex gap-3 p-3 items-center">
                   <img src={course.image} alt="" className="w-16 h-16 rounded-[12px] object-cover shrink-0" />
                   <div className="min-w-0">
@@ -42,7 +70,7 @@ export default function SearchPage() {
           <div className="space-y-3">
             <h2 className="text-sm font-bold text-[#1E293B] uppercase tracking-wider text-[#94A3B8]">Educators</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {MOCK_TEACHERS.map(t => (
+              {safeTeachers.map(t => (
                 <Card key={t.id} hover className="flex items-center gap-3 p-3">
                   <Avatar src={t.avatar} size="sm" verified={t.verified} />
                   <div className="min-w-0">

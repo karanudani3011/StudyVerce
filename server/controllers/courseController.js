@@ -1,4 +1,5 @@
 import Course from '../models/Course.js';
+import User from '../models/User.js';
 
 // @desc    Get all courses from MongoDB
 // @route   GET /api/courses
@@ -106,5 +107,229 @@ export const deleteCourse = async (req, res) => {
   } catch (error) {
     console.error('Delete Course Error:', error);
     return res.status(500).json({ success: false, message: error.message || 'Server error deleting course.' });
+  }
+};
+
+// @desc    Enroll current user in a course
+// @route   POST /api/courses/:id/enroll
+// @access  Private (Student)
+export const enrollInCourse = async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const userId = req.user._id;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Check if already enrolled
+    const alreadyEnrolled = user.enrolledCourses.some(
+      (enrolled) => enrolled.toString() === courseId
+    );
+
+    if (alreadyEnrolled) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Already enrolled in this course',
+        alreadyEnrolled: true
+      });
+    }
+
+    // Add course to user's enrolled courses
+    user.enrolledCourses.push(courseId);
+    await user.save();
+
+    // Increment student count on course (optional)
+    course.students = String(Number(course.students.replace(/[^\d]/g, '')) + 1);
+    await course.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Successfully enrolled in course! 🎉',
+      enrolled: true,
+    });
+  } catch (error) {
+    console.error('Enroll Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error enrolling in course.' });
+  }
+};
+
+// @desc    Get all enrolled courses for current user with progress
+// @route   GET /api/courses/enrolled/my
+// @access  Private (Student)
+export const getEnrolledCourses = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId).populate({
+      path: 'enrolledCourses',
+      model: 'Course',
+      select: 'title instructor instructorAvatar image tags duration lessons students rating progress level price subject category subcategory description lectures tutorId createdAt'
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Transform enrolled courses with progress data
+    const enrolledCourses = user.enrolledCourses.map(course => ({
+      id: course._id,
+      title: course.title,
+      instructor: course.instructor,
+      instructorAvatar: course.instructorAvatar,
+      image: course.image,
+      tags: course.tags,
+      duration: course.duration,
+      lessons: course.lessons,
+      students: course.students,
+      rating: course.rating,
+      progress: course.progress || 0,
+      level: course.level,
+      price: course.price,
+      subject: course.subject,
+      category: course.category,
+      subcategory: course.subcategory,
+      description: course.description,
+      lectures: course.lectures,
+      tutorId: course.tutorId,
+      enrolledAt: course.createdAt
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: enrolledCourses.length,
+      data: enrolledCourses,
+    });
+  } catch (error) {
+    console.error('Get Enrolled Courses Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error fetching enrolled courses.' });
+  }
+};
+
+// @desc    Update course progress for current user
+// @route   PUT /api/courses/:id/progress
+// @access  Private (Student)
+export const updateCourseProgress = async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const userId = req.user._id;
+    const { progress, completedLectureId } = req.body;
+
+    if (progress === undefined && !completedLectureId) {
+      return res.status(400).json({ success: false, message: 'Progress value or completedLectureId required' });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Verify user is enrolled
+    const isEnrolled = user.enrolledCourses.some(
+      (enrolled) => enrolled.toString() === courseId
+    );
+
+    if (!isEnrolled) {
+      return res.status(403).json({ success: false, message: 'Not enrolled in this course' });
+    }
+
+    let newProgress = course.progress || 0;
+
+    if (completedLectureId && course.lectures && course.lectures.length > 0) {
+      // Calculate progress based on completed lectures
+      // This is a simple implementation - can be enhanced with a separate progress model
+      const totalLectures = course.lectures.length;
+      // For now, just increment by a reasonable amount
+      newProgress = Math.min(100, newProgress + Math.round(100 / totalLectures));
+    } else if (progress !== undefined) {
+      newProgress = Math.max(0, Math.min(100, progress));
+    }
+
+    course.progress = newProgress;
+    await course.save();
+
+    return res.status(200).json({
+      success: true,
+      progress: newProgress,
+      message: 'Progress updated successfully',
+    });
+  } catch (error) {
+    console.error('Update Progress Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error updating progress.' });
+  }
+};
+
+// @desc    Get course progress for current user
+// @route   GET /api/courses/:id/progress
+// @access  Private (Student)
+export const getCourseProgress = async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const userId = req.user._id;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isEnrolled = user.enrolledCourses.some(
+      (enrolled) => enrolled.toString() === courseId
+    );
+
+    if (!isEnrolled) {
+      return res.status(403).json({ success: false, message: 'Not enrolled in this course', enrolled: false });
+    }
+
+    return res.status(200).json({
+      success: true,
+      progress: course.progress || 0,
+      enrolled: true,
+    });
+  } catch (error) {
+    console.error('Get Progress Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error fetching progress.' });
+  }
+};
+
+// @desc    Check if user is enrolled in a course
+// @route   GET /api/courses/:id/enrollment-status
+// @access  Private (Student)
+export const getEnrollmentStatus = async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const isEnrolled = user.enrolledCourses.some(
+      (enrolled) => enrolled.toString() === courseId
+    );
+
+    return res.status(200).json({
+      success: true,
+      enrolled: isEnrolled,
+    });
+  } catch (error) {
+    console.error('Get Enrollment Status Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error checking enrollment.' });
   }
 };

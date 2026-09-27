@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card } from '../../components/ui/index.jsx';
-import { MOCK_CATEGORIES } from '../../data/mockData';
 
 export default function CategoriesPage() {
   const navigate = useNavigate();
@@ -14,7 +13,7 @@ export default function CategoriesPage() {
           <p className="text-sm text-[#64748B]">Explore StudyVerse by academic field.</p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {MOCK_CATEGORIES.map(cat => (
+          {[].map(cat => (
             <Card key={cat.id} hover onClick={() => navigate('/explore')} className="space-y-4 p-6">
               <div className={`w-14 h-14 rounded-[16px] ${cat.color} flex items-center justify-center text-2xl`}>
                 {cat.icon}

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Search, Bell, Sparkles, Filter } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../ui/Avatar';
-import { MOCK_NOTIFICATIONS } from '../../data/mockData';
 
 export const TopHeader = () => {
   const { user, searchQuery, setSearchQuery, setActiveTab, notificationsCount, setNotificationsCount } = useAuth();
@@ -48,7 +47,7 @@ export const TopHeader = () => {
             className="relative p-2.5 rounded-full bg-[#F5F7FB] hover:bg-[#EEF4FF] text-[#64748B] hover:text-[#4F7DF6] border border-[#E2E8F0] transition-colors cursor-pointer"
           >
             <Bell className="w-4 h-4" strokeWidth={2} />
-            {notificationsCount > 0 && (
+            {Array.isArray(notificationsCount) ? notificationsCount.length > 0 : notificationsCount > 0 && (
               <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#EF4444] rounded-full ring-2 ring-white" />
             )}
           </button>
@@ -67,27 +66,23 @@ export const TopHeader = () => {
               </div>
 
               <div className="space-y-2 max-h-72 overflow-y-auto">
-                {MOCK_NOTIFICATIONS.slice(0, 3).map((item) => (
+                {Array.isArray(notificationsCount) && notificationsCount.length > 0 ? notificationsCount.map((item, i) => (
                   <div
-                    key={item.id}
+                    key={i}
                     onClick={() => {
                       setShowNotifications(false);
                       setActiveTab('notifications');
                     }}
                     className="flex gap-3 p-2.5 rounded-[12px] hover:bg-[#F5F7FB] cursor-pointer transition-colors"
                   >
-                    <span className="text-xl leading-none">{item.icon}</span>
+                    <span className="text-xl leading-none">🔔</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-[#1E293B] truncate">
-                        {item.title}
-                      </p>
-                      <p className="text-[11px] text-[#64748B] line-clamp-2 mt-0.5">
-                        {item.desc}
-                      </p>
-                      <span className="text-[10px] text-[#94A3B8] mt-1 block">{item.time}</span>
+                      <p className="text-xs font-bold text-[#1E293B] truncate">Notification</p>
+                      <p className="text-[11px] text-[#64748B] line-clamp-2 mt-0.5">New activity detected</p>
+                      <span className="text-[10px] text-[#94A3B8] mt-1 block">Just now</span>
                     </div>
                   </div>
-                ))}
+                )) : <div className="text-center py-4 text-[#64748B] text-xs">No notifications</div>}
               </div>
             </div>
           )}
@@ -103,12 +98,14 @@ export const TopHeader = () => {
         </button>
 
         {/* Profile Avatar */}
-        <div
-          onClick={() => setActiveTab('profile')}
-          className="cursor-pointer hover:opacity-90 transition-opacity"
-        >
-          <Avatar src={user.avatar} alt={user.name} size="sm" verified />
-        </div>
+        {user && (
+          <div
+            onClick={() => setActiveTab('profile')}
+            className="cursor-pointer hover:opacity-90 transition-opacity"
+          >
+            <Avatar src={user.avatar} alt={user.name} size="sm" verified />
+          </div>
+        )}
       </div>
     </header>
   );

@@ -3,7 +3,6 @@ import { Sidebar } from '../components/layout/Sidebar';
 import { TopHeader } from '../components/layout/TopHeader';
 import { RightSidebar } from '../components/layout/RightSidebar';
 import { Card } from '../components/ui/Card';
-import { MOCK_NOTIFICATIONS } from '../data/mockData';
 
 export const NotificationPage = () => {
   return (
@@ -21,7 +20,7 @@ export const NotificationPage = () => {
 
           <div className="space-y-6">
             {['Today', 'Yesterday', 'This Week'].map((group) => {
-              const items = MOCK_NOTIFICATIONS.filter(n => n.group === group);
+              const items = [];
               if (!items.length) return null;
               return (
                 <div key={group} className="space-y-2">

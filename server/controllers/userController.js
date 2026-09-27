@@ -1,6 +1,8 @@
 import User from '../models/User.js';
 import Tutor from '../models/Tutor.js';
 import { cloudinary } from '../config/cloudinary.js';
+import QuizAttempt from '../models/QuizAttempt.js';
+import StudySession from '../models/StudySession.js';
 
 // @desc    Get dashboard statistics for current user
 // @route   GET /api/users/dashboard
@@ -15,29 +17,200 @@ export const getDashboardStats = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const currentGoal = user.currentGoalMinutes || 45;
+    // Get quiz stats
+    const quizStats = await QuizAttempt.aggregate([
+      { $match: { userId: user._id } },
+      {
+        $group: {
+          _id: null,
+          totalAttempts: { $sum: 1 },
+          totalCorrect: { $sum: '$correctAnswers' },
+          totalQuestions: { $sum: '$totalQuestions' },
+          avgPercentage: { $avg: '$percentage' },
+          quizzesPassed: { $sum: { $cond: ['$passed', 1, 0] } },
+          totalXPEarned: { $sum: '$xpEarned' },
+        },
+      },
+    ]);
+
+    // Get today's study time
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todaySessions = await StudySession.find({
+      userId: user._id,
+      status: 'completed',
+      startedAt: { $gte: today },
+    });
+    const todayMinutes = todaySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+
+    // Get this week's study time
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
+    const weekSessions = await StudySession.find({
+      userId: user._id,
+      status: 'completed',
+      startedAt: { $gte: weekStart },
+    });
+    const weekMinutes = weekSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+
+    // Get total study time
+    const allSessions = await StudySession.find({
+      userId: user._id,
+      status: 'completed',
+    });
+    const totalMinutes = allSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+
+    const currentGoal = user.currentGoalMinutes || 0;
     const dailyGoal = user.dailyGoalMinutes || 60;
+    const completionPercentage = Math.min(Math.round((currentGoal / dailyGoal) * 100), 100);
+
+    // Format study time
+    const formatTime = (minutes) => {
+      if (minutes < 60) return `${minutes} min`;
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    };
+
+    // Calculate today's quiz attempts
+    const todayQuizAttempts = await QuizAttempt.countDocuments({
+      userId: user._id,
+      completedAt: { $gte: today },
+    });
+
+    // Dynamic daily tasks
+    const dailyTasks = [
+      {
+        id: 'task-1',
+        text: `Complete today's study session (${todayMinutes}/${dailyGoal} mins)`,
+        subject: 'Study Habit',
+        xp: 25,
+        completed: todayMinutes >= Math.min(30, dailyGoal),
+      },
+      {
+        id: 'task-2',
+        text: 'Take a daily practice quiz challenge',
+        subject: 'Self Assessment',
+        xp: 50,
+        completed: todayQuizAttempts > 0,
+      },
+      {
+        id: 'task-3',
+        text: 'Review lecture notes & course modules',
+        subject: 'Revision',
+        xp: 20,
+        completed: (user.enrolledCourses?.length || 0) > 0 && todayMinutes > 0,
+      },
+      {
+        id: 'task-4',
+        text: 'Maintain active daily learning streak',
+        subject: 'Consistency',
+        xp: 15,
+        completed: (user.streak || 0) > 0,
+      },
+    ];
 
     return res.json({
       success: true,
       stats: {
-        streak: user.streak || 1,
+        streak: user.streak || 0,
+        longestStreak: user.longestStreak || 0,
         xp: user.xp || 0,
-        studyHours: '32.5 hrs',
+        studyToday: formatTime(todayMinutes),
+        studyThisWeek: formatTime(weekMinutes),
+        studyTotal: formatTime(totalMinutes),
+        studyHours: formatTime(weekMinutes),
+        studyTodayMinutes: todayMinutes,
+        studyWeekMinutes: weekMinutes,
+        studyTotalMinutes: totalMinutes,
         dailyGoalMinutes: dailyGoal,
         currentGoalMinutes: currentGoal,
-        completionPercentage: Math.round((currentGoal / dailyGoal) * 100),
+        completionPercentage,
+        quizzesCompleted: quizStats[0]?.totalAttempts || 0,
+        quizzesPassed: quizStats[0]?.quizzesPassed || 0,
+        avgQuizScore: quizStats[0]?.avgPercentage ? Math.round(quizStats[0].avgPercentage) : 0,
+        totalQuestionsAnswered: quizStats[0]?.totalQuestions || 0,
+        correctAnswers: quizStats[0]?.totalCorrect || 0,
       },
+      dailyTasks,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         avatar: user.avatar,
         bio: user.bio,
-      }
+        institution: user.institution,
+        username: user.username,
+      },
     });
   } catch (error) {
     return res.status(500).json({ message: error.message || 'Server error fetching dashboard stats.' });
+  }
+};
+
+// @desc    Get user's daily study tasks
+// @route   GET /api/study-tasks or GET /api/users/tasks
+// @access  Private
+export const getDailyTasks = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id) || await Tutor.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todaySessions = await StudySession.find({
+      userId: user._id,
+      status: 'completed',
+      startedAt: { $gte: today },
+    });
+    const todayMinutes = todaySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+    const dailyGoal = user.dailyGoalMinutes || 60;
+
+    const todayQuizAttempts = await QuizAttempt.countDocuments({
+      userId: user._id,
+      completedAt: { $gte: today },
+    });
+
+    const tasks = [
+      {
+        id: 'task-1',
+        text: `Complete today's study session (${todayMinutes}/${dailyGoal} mins)`,
+        subject: 'Study Habit',
+        xp: 25,
+        completed: todayMinutes >= Math.min(30, dailyGoal),
+      },
+      {
+        id: 'task-2',
+        text: 'Take a daily practice quiz challenge',
+        subject: 'Self Assessment',
+        xp: 50,
+        completed: todayQuizAttempts > 0,
+      },
+      {
+        id: 'task-3',
+        text: 'Review lecture notes & course modules',
+        subject: 'Revision',
+        xp: 20,
+        completed: (user.enrolledCourses?.length || 0) > 0 && todayMinutes > 0,
+      },
+      {
+        id: 'task-4',
+        text: 'Maintain active daily learning streak',
+        subject: 'Consistency',
+        xp: 15,
+        completed: (user.streak || 0) > 0,
+      },
+    ];
+
+    res.status(200).json({
+      success: true,
+      data: tasks,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 };
 

@@ -111,7 +111,7 @@ export const Sidebar = () => {
                 </div>
                 <div>
                   <div className="text-xs font-bold text-[#1E293B]">
-                    {user?.streak || 1} Day Streak
+                    {user?.streak || 0} Day Streak
                   </div>
                   <div className="text-[11px] text-[#64748B]">
                     Daily habit active
@@ -119,7 +119,7 @@ export const Sidebar = () => {
                 </div>
               </div>
               <span className="text-xs font-bold text-[#4F7DF6] bg-white px-2 py-0.5 rounded-[8px] border border-[#E2E8F0]">
-                +{user?.xp || 0}
+                +{(user?.xp || 0).toLocaleString()} XP
               </span>
             </>
           )}
@@ -175,26 +175,28 @@ export const Sidebar = () => {
 
       {/* User profile bottom bar */}
       <div className="pt-3 border-t border-[#EDF2F7] space-y-1">
-        <div
-          onClick={() => setActiveTab('profile')}
-          className="flex items-center gap-3 p-2 rounded-[14px] hover:bg-[#F5F7FB] cursor-pointer transition-colors"
-        >
-          <Avatar src={user.avatar} alt={user.name} size="md" verified />
-          <div className="flex-1 min-w-0">
-            <h4 className="text-xs font-bold text-[#1E293B] truncate">
-              {user.name}
-            </h4>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              {user?.role === 'admin' && (
-                <span className="px-1.5 py-0.5 rounded-md bg-slate-900 text-slate-200 text-[9px] font-extrabold">🛡️ ADMIN</span>
-              )}
-              {(user?.role === 'tutor' || user?.role === 'faculty') && (
-                <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[9px] font-extrabold">👨‍🏫 TUTOR</span>
-              )}
-              <p className="text-[11px] text-[#64748B] truncate">{user.username}</p>
+        {user && (
+          <div
+            onClick={() => setActiveTab('profile')}
+            className="flex items-center gap-3 p-2 rounded-[14px] hover:bg-[#F5F7FB] cursor-pointer transition-colors"
+          >
+            <Avatar src={user.avatar} alt={user.name} size="md" verified />
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs font-bold text-[#1E293B] truncate">
+                {user.name}
+              </h4>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {user?.role === 'admin' && (
+                  <span className="px-1.5 py-0.5 rounded-md bg-slate-900 text-slate-200 text-[9px] font-extrabold">🛡️ ADMIN</span>
+                )}
+                {(user?.role === 'tutor' || user?.role === 'faculty') && (
+                  <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[9px] font-extrabold">👨‍🏫 TUTOR</span>
+                )}
+                <p className="text-[11px] text-[#64748B] truncate">{user.username}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <button
           onClick={logout}

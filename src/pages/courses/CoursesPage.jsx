@@ -1,17 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Star, Clock, Users, Heart, Search,
-  ChevronDown, Check, SlidersHorizontal, X, RotateCcw, Award, Plus, Trash2
+  ChevronDown, Check, SlidersHorizontal, X, RotateCcw, Award, Trash2,
+  CheckCircle2, Play, BookCheck
 } from 'lucide-react';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Badge } from '../../components/ui/index.jsx';
-import { MOCK_COURSES } from '../../data/mockData';
+
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { CourseUploadModal } from '../../components/courses/CourseUploadModal';
-import { apiGet, apiDelete } from '../../config/api';
+import { apiGet, apiPost, apiDelete } from '../../config/api';
 
 // Custom Dropdown select component
 function CustomDropdown({ label, options, selectedValue, onChange, disabled, icon: Icon, placeholder }) {
@@ -112,7 +113,9 @@ export default function CoursesPage() {
   const { addToast } = useToast();
   const [activeSubTab, setActiveSubTab] = useState('all');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [coursesList, setCoursesList] = useState(MOCK_COURSES);
+  const [coursesList, setCoursesList] = useState([]);
+  const [enrolledCourseIds, setEnrolledCourseIds] = useState(new Set());
+  const [checkingEnrollment, setCheckingEnrollment] = useState({});
 
   // Search & Filter State
   const [searchVal, setSearchVal] = useState('');
@@ -149,7 +152,7 @@ export default function CoursesPage() {
             lectures: c.lectures,
             tutorId: c.tutorId || c.instructorId,
           }));
-          setCoursesList([...formatted, ...MOCK_COURSES]);
+          setCoursesList(formatted);
         }
       } catch (err) {
         console.warn('Backend courses fetch skipped/offline:', err.message);
@@ -157,6 +160,79 @@ export default function CoursesPage() {
     };
     fetchBackendCourses();
   }, []);
+
+  // Check enrollment status for all courses when user is logged in
+  useEffect(() => {
+    if (!user) return;
+    
+    const checkAllEnrollments = async () => {
+      try {
+        const res = await apiGet('/courses/enrolled/my');
+        if (res.success && res.data) {
+          const ids = new Set(res.data.map(c => c.id || c._id));
+          setEnrolledCourseIds(ids);
+        }
+      } catch (err) {
+        console.warn('Enrollment check skipped:', err.message);
+      }
+    };
+    checkAllEnrollments();
+  }, [user]);
+
+  const isEnrolled = useCallback((courseId) => {
+    return enrolledCourseIds.has(courseId);
+  }, [enrolledCourseIds]);
+
+  const checkEnrollmentStatus = useCallback(async (courseId) => {
+    if (!user) return false;
+    setCheckingEnrollment(prev => ({ ...prev, [courseId]: true }));
+    try {
+      const res = await apiGet(`/courses/${courseId}/enrollment-status`);
+      if (res.success) {
+        setEnrolledCourseIds(prev => {
+          const next = new Set(prev);
+          if (res.enrolled) next.add(courseId);
+          else next.delete(courseId);
+          return next;
+        });
+        return res.enrolled;
+      }
+    } catch (err) {
+      console.warn('Enrollment check failed:', err.message);
+    } finally {
+      setCheckingEnrollment(prev => ({ ...prev, [courseId]: false }));
+    }
+    return false;
+  }, [user]);
+
+  const handleEnroll = useCallback(async (courseId, e) => {
+    if (e) e.stopPropagation();
+    if (!user) {
+      addToast('Please log in to enroll', 'error');
+      navigate('/login');
+      return;
+    }
+    
+    if (isEnrolled(courseId)) {
+      navigate(`/courses/${courseId}/learn`);
+      return;
+    }
+
+    try {
+      const res = await apiPost(`/courses/${courseId}/enroll`);
+      if (res.success) {
+        setEnrolledCourseIds(prev => new Set([...prev, courseId]));
+        addToast('Successfully enrolled! 🎉', 'success');
+      } else if (res.alreadyEnrolled) {
+        setEnrolledCourseIds(prev => new Set([...prev, courseId]));
+        addToast('Already enrolled in this course', 'info');
+      } else {
+        addToast(res.message || 'Enrollment failed', 'error');
+      }
+    } catch (err) {
+      addToast(err.message || 'Failed to enroll', 'error');
+    }
+  }, [user, addToast, navigate, isEnrolled]);
 
   const handleCourseCreated = (newCourse) => {
     const formattedNewCourse = {
@@ -233,10 +309,14 @@ export default function CoursesPage() {
     ? []
     : ['All', ...coursesList.filter(c => c.category === categoryVal && c.subcategory === subcategoryVal)];
 
+  const enrolledCount = enrolledCourseIds.size;
+
   // Apply filters
   let filteredCourses = activeSubTab === 'all'
     ? coursesList
-    : coursesList.filter(c => isWishlisted(c.id));
+    : activeSubTab === 'wishlist'
+    ? coursesList.filter(c => isWishlisted(c.id))
+    : coursesList.filter(c => isEnrolled(c.id));
 
   // 1. Search Query filter
   if (searchVal.trim() !== '') {
@@ -311,6 +391,23 @@ export default function CoursesPage() {
                     activeSubTab === 'wishlist' ? 'bg-rose-50 text-white' : 'bg-[#E2E8F0] text-[#64748B]'
                   }`}>
                     {wishlistCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveSubTab('enrolled')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  activeSubTab === 'enrolled'
+                    ? 'bg-white text-emerald-600 shadow-xs'
+                    : 'text-[#64748B] hover:text-[#1E293B]'
+                }`}
+              >
+                My Courses
+                {enrolledCount > 0 && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                    activeSubTab === 'enrolled' ? 'bg-emerald-50 text-white' : 'bg-[#E2E8F0] text-[#64748B]'
+                  }`}>
+                    {enrolledCount}
                   </span>
                 )}
               </button>
@@ -469,7 +566,7 @@ export default function CoursesPage() {
               )}
               {courseVal !== 'All' && (
                 <span className="inline-flex items-center gap-1 bg-[#EEF4FF] text-[#4F7DF6] text-xs font-bold px-2.5 py-1 rounded-lg border border-[#EEF4FF] max-w-[250px]">
-                  <span className="truncate">Course: {MOCK_COURSES.find(c => c.id === courseVal)?.title}</span>
+                  <span className="truncate">Course: {coursesList.find(c => c.id === courseVal)?.title}</span>
                   <button onClick={() => setCourseVal('All')} className="p-0.5 hover:bg-[#4F7DF6]/10 rounded-full transition-colors cursor-pointer shrink-0">
                     <X className="w-3 h-3" />
                   </button>
@@ -503,16 +600,18 @@ export default function CoursesPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {filteredCourses.map(course => {
-              const isAdmin = user?.role === 'admin';
-              const isFaculty = user?.role === 'faculty' || user?.role === 'tutor';
-              const isOwnCourse = isFaculty && (
-                (course.tutorId && (course.tutorId === user?._id || course.tutorId === user?.id)) ||
-                (course.instructor && user?.name && course.instructor.toLowerCase().includes(user.name.toLowerCase()))
-              );
-              const canDeleteCourse = isAdmin || isOwnCourse;
+{filteredCourses.map(course => {
+                const isAdmin = user?.role === 'admin';
+                const isFaculty = user?.role === 'faculty' || user?.role === 'tutor';
+                const isOwnCourse = isFaculty && (
+                  (course.tutorId && (course.tutorId === user?._id || course.tutorId === user?.id)) ||
+                  (course.instructor && user?.name && course.instructor.toLowerCase().includes(user.name.toLowerCase()))
+                );
+                const canDeleteCourse = isAdmin || isOwnCourse;
+                const courseEnrolled = isEnrolled(course.id);
+                const enrollmentChecking = checkingEnrollment[course.id];
 
-              return (
+                return (
                 <Card key={course.id} hover onClick={() => navigate(`/courses/${course.id}`)} className="space-y-4 relative group cursor-pointer">
                   <div className="relative overflow-hidden rounded-[14px]">
                     <img src={course.image} alt="" className="w-full h-44 object-cover border border-[#E2E8F0] transition-transform duration-300 group-hover:scale-105" />
@@ -528,41 +627,72 @@ export default function CoursesPage() {
                       </button>
                     )}
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleWishlistToggle(course.id);
-                    }}
-                    className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-xs rounded-full shadow-[0_4px_12px_rgba(15,23,42,0.15)] border border-[#E2E8F0]/50 hover:bg-white active:scale-95 transition-all z-10 cursor-pointer"
-                  >
-                    <Heart
-                      className={`w-4 h-4 transition-colors ${
-                        isWishlisted(course.id)
-                          ? 'fill-rose-500 text-rose-500'
-                          : 'text-[#64748B] hover:text-rose-500'
-                      }`}
-                      strokeWidth={2.5}
-                    />
-                  </button>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="primary" size="sm">{course.subject}</Badge>
-                    <span className="text-xs font-bold text-[#F59E0B] flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-current" /> {course.rating}</span>
-                  </div>
-                  <h3 className="text-base font-bold text-[#1E293B] line-clamp-2">{course.title}</h3>
-                  <p className="text-xs text-[#94A3B8]">{course.instructor}</p>
-                </div>
+                    {/* Enrollment Status Badge */}
+                    {courseEnrolled && (
+                      <div className="absolute top-3 left-3 z-10">
+                        <span className="px-2.5 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded-full flex items-center gap-1 shadow-lg">
+                          <BookCheck className="w-3 h-3" /> Enrolled
+                        </span>
+                      </div>
+                    )}
 
-                <div className="flex items-center justify-between text-xs text-[#64748B] pt-3 border-t border-[#EDF2F7]">
-                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {course.duration}</span>
-                  <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {course.students}</span>
-                  <span className="font-bold text-[#22C55E]">{course.price}</span>
-                </div>
-              </Card>
-            );
-          })}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleWishlistToggle(course.id);
+                      }}
+                      className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-xs rounded-full shadow-[0_4px_12px_rgba(15,23,42,0.15)] border border-[#E2E8F0]/50 hover:bg-white active:scale-95 transition-all z-10 cursor-pointer"
+                    >
+                      <Heart
+                        className={`w-4 h-4 transition-colors ${
+                          isWishlisted(course.id)
+                            ? 'fill-rose-500 text-rose-500'
+                            : 'text-[#64748B] hover:text-rose-500'
+                        }`}
+                        strokeWidth={2.5}
+                      />
+                    </button>
+
+                    {/* Quick Enroll Button on Card */}
+                    {user && !courseEnrolled && !canDeleteCourse && (
+                      <button
+                        onClick={(e) => handleEnroll(course.id, e)}
+                        className="absolute bottom-3 left-3 right-3 px-3 py-2 bg-[#4F7DF6] text-white text-xs font-bold rounded-xl shadow-lg hover:bg-[#3B82F6] active:scale-95 transition-all z-10 cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Enroll Free
+                      </button>
+                    )}
+
+                    {courseEnrolled && !canDeleteCourse && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/courses/${course.id}/learn`);
+                        }}
+                        className="absolute bottom-3 left-3 right-3 px-3 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl shadow-lg hover:bg-emerald-700 active:scale-95 transition-all z-10 cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Play className="w-3.5 h-3.5" /> Continue Learning
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="primary" size="sm">{course.subject}</Badge>
+                      <span className="text-xs font-bold text-[#F59E0B] flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-current" /> {course.rating}</span>
+                    </div>
+                    <h3 className="text-base font-bold text-[#1E293B] line-clamp-2">{course.title}</h3>
+                    <p className="text-xs text-[#94A3B8]">{course.instructor}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-[#64748B] pt-3 border-t border-[#EDF2F7]">
+                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {course.duration}</span>
+                    <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {course.students}</span>
+                    <span className="font-bold text-[#22C55E]">{course.price}</span>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

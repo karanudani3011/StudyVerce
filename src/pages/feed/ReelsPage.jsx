@@ -1,33 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiGet } from '../../config/api';
 import { Play, Heart, MessageCircle, Share2, Sparkles, Volume2, VolumeX, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Avatar, Badge } from '../../components/ui/index.jsx';
 
-const reels = [
-  {
-    id: 1,
-    title: 'Visualizing Matrix Multiplication in 30 Seconds 📐',
-    teacher: 'Dr. Priya Sharma',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100',
-    likes: '4.2K',
-    comments: '182',
-    subject: 'Mathematics',
-    videoBg: 'bg-gradient-to-br from-blue-900 to-indigo-900',
-  },
-  {
-    id: 2,
-    title: 'Quantum Entanglement Trick — Spooky Action at a Distance ⚛️',
-    teacher: 'Prof. Marcus Vance',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=100',
-    likes: '8.9K',
-    comments: '412',
-    subject: 'Physics',
-    videoBg: 'bg-gradient-to-br from-purple-900 to-slate-900',
-  },
-];
-
 export default function ReelsPage() {
+  const [reels, setReels] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReels = async () => {
+      try {
+        const res = await apiGet('/posts/trending');
+        if (res.success) setReels(res.data || []);
+      } catch (e) {}
+      finally { setLoading(false); }
+    };
+    fetchReels();
+  }, []);
   const navigate = useNavigate();
   const [muted, setMuted] = useState(true);
 

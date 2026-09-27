@@ -2,10 +2,11 @@ import jwt from 'jsonwebtoken';
 import Tutor from '../models/Tutor.js';
 import User from '../models/User.js';
 import TutorApplication from '../models/TutorApplication.js';
+import { registerUser } from './authController.js';
 
 // Helper to generate JWT Token
 const generateToken = (id) => {
-  return jwt.sign({ id, isTutor: true }, process.env.JWT_SECRET || 'secret123', {
+  return jwt.sign({ id, isTutor: true }, process.env.JWT_SECRET || 'studyverse_secret_jwt_key_2026_secure', {
     expiresIn: process.env.JWT_EXPIRE || '30d',
   });
 };
@@ -14,71 +15,8 @@ const generateToken = (id) => {
 // @route   POST /api/tutors/register
 // @access  Public
 export const registerTutor = async (req, res) => {
-  try {
-    const { name, email, password, institution, department, title, role } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please provide name, email, and password.' });
-    }
-
-    const cleanEmail = email.trim().toLowerCase();
-
-    // Email validation for Tutor & Faculty accounts
-    if (!cleanEmail.endsWith('@faculty.studyverse.com')) {
-      return res.status(400).json({
-        message: 'Tutor & Faculty accounts must use an official @faculty.studyverse.com email address.',
-      });
-    }
-
-    const tutorExists = await Tutor.findOne({ email: cleanEmail });
-    if (tutorExists) {
-      return res.status(400).json({ message: 'A Tutor/Faculty account with this email already exists.' });
-    }
-
-    const username = `@${name.toLowerCase().replace(/\s+/g, '')}${Math.floor(100 + Math.random() * 900)}`;
-
-    const tutor = await Tutor.create({
-      name,
-      email: cleanEmail,
-      password,
-      username,
-      institution: institution || 'Stanford University',
-      department: department || 'Computer Science & AI',
-      title: title || 'Faculty / Lead Instructor',
-      role: role || 'faculty',
-      isVerified: true,
-    });
-
-    if (tutor) {
-      const token = generateToken(tutor._id);
-      return res.status(201).json({
-        success: true,
-        token,
-        user: {
-          id: tutor._id,
-          name: tutor.name,
-          email: tutor.email,
-          username: tutor.username,
-          avatar: tutor.avatar,
-          bio: tutor.bio,
-          institution: tutor.institution,
-          department: tutor.department,
-          title: tutor.title,
-          role: tutor.role,
-          isVerified: tutor.isVerified,
-          rating: tutor.rating,
-          xp: tutor.xp,
-          streak: tutor.streak,
-          wishlistedCourses: tutor.wishlistedCourses || [],
-        },
-      });
-    } else {
-      return res.status(400).json({ message: 'Invalid tutor data received.' });
-    }
-  } catch (error) {
-    console.error('Register Tutor Error:', error);
-    return res.status(500).json({ message: error.message || 'Server error during tutor registration.' });
-  }
+  req.body.role = req.body.role || 'tutor';
+  return registerUser(req, res);
 };
 
 // @desc    Authenticate Tutor / Faculty member
@@ -98,9 +36,12 @@ export const loginTutor = async (req, res) => {
     const tutor = await Tutor.findOne({ email: cleanEmail }).select('+password');
 
     if (tutor && (await tutor.matchPassword(password))) {
-      if (!cleanEmail.endsWith('@faculty.studyverse.com')) {
+      if (tutor.emailVerified === false) {
         return res.status(403).json({
-          message: 'Tutor & Faculty accounts must use an official @faculty.studyverse.com email address.',
+          success: false,
+          requireVerification: true,
+          email: tutor.email,
+          message: 'Please verify your email before logging in.',
         });
       }
 
@@ -119,7 +60,8 @@ export const loginTutor = async (req, res) => {
           department: tutor.department,
           title: tutor.title,
           role: tutor.role,
-          isVerified: tutor.isVerified,
+          isVerified: tutor.isVerified ?? true,
+          emailVerified: true,
           rating: tutor.rating,
           xp: tutor.xp,
           streak: tutor.streak,
@@ -131,13 +73,16 @@ export const loginTutor = async (req, res) => {
     // Check User collection if role is tutor/faculty
     const user = await User.findOne({ email: cleanEmail, role: { $in: ['tutor', 'faculty'] } }).select('+password');
     if (user && (await user.matchPassword(password))) {
-      if (user.role === 'faculty' && !user.email.endsWith('@faculty.studyverse.com')) {
+      if (user.emailVerified === false) {
         return res.status(403).json({
-          message: 'Faculty accounts must use an official @faculty.studyverse.com email address.',
+          success: false,
+          requireVerification: true,
+          email: user.email,
+          message: 'Please verify your email before logging in.',
         });
       }
 
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret123', { expiresIn: '30d' });
+      const token = jwt.sign({ id: user._id, isTutor: true }, process.env.JWT_SECRET || 'studyverse_secret_jwt_key_2026_secure', { expiresIn: '30d' });
       return res.json({
         success: true,
         token,
@@ -149,7 +94,11 @@ export const loginTutor = async (req, res) => {
           avatar: user.avatar,
           bio: user.bio,
           institution: user.institution,
+          department: user.department,
+          title: user.title,
           role: user.role,
+          isVerified: user.isVerified ?? true,
+          emailVerified: true,
           xp: user.xp,
           streak: user.streak,
           wishlistedCourses: user.wishlistedCourses || [],

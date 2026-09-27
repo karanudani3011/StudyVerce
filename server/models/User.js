@@ -56,11 +56,19 @@ const userSchema = new mongoose.Schema(
     },
     xp: {
       type: Number,
-      default: 1250,
+      default: 0,
     },
     streak: {
       type: Number,
-      default: 5,
+      default: 0,
+    },
+    longestStreak: {
+      type: Number,
+      default: 0,
+    },
+    lastStudyDate: {
+      type: Date,
+      default: null,
     },
     dailyGoalMinutes: {
       type: Number,
@@ -68,7 +76,31 @@ const userSchema = new mongoose.Schema(
     },
     currentGoalMinutes: {
       type: Number,
-      default: 45,
+      default: 0,
+    },
+    totalStudyMinutes: {
+      type: Number,
+      default: 0,
+    },
+    weeklyStudyMinutes: {
+      type: Number,
+      default: 0,
+    },
+    weeklyStudyWeekStart: {
+      type: Date,
+      default: null,
+    },
+    quizzesCompleted: {
+      type: Number,
+      default: 0,
+    },
+    quizAttempts: {
+      type: Number,
+      default: 0,
+    },
+    averageQuizScore: {
+      type: Number,
+      default: 0,
     },
     savedPosts: [{
       type: mongoose.Schema.Types.ObjectId,
@@ -81,6 +113,30 @@ const userSchema = new mongoose.Schema(
     wishlistedCourses: {
       type: [String],
       default: [],
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    otpHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    otpExpiresAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+    otpAttempts: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
+    otpLastSentAt: {
+      type: Date,
+      default: null,
+      select: false,
     },
     passwordResetOtp: {
       type: String,

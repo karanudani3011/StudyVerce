@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Volume2, Pin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Sidebar } from '../components/layout/Sidebar';
@@ -7,13 +7,34 @@ import { RightSidebar } from '../components/layout/RightSidebar';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Tabs } from '../components/ui/Tabs';
-import { MOCK_COMMUNITIES } from '../data/mockData';
+import { apiGet } from '../config/api';
 
 export const CommunityPage = () => {
   const { setActiveTab } = useAuth();
-  const [activeCommunity] = useState(MOCK_COMMUNITIES[0]);
+  const [communitiesData, setCommunitiesData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTabId, setActiveTabId] = useState('posts');
-  const [joined, setJoined] = useState(activeCommunity.joined);
+  const [joined, setJoined] = useState(false);
+
+  useEffect(() => {
+    const fetchCommunities = async () => {
+      try {
+        const res = await apiGet('/communities');
+        if (res.success && res.data && res.data.length > 0) {
+          setCommunitiesData(res.data);
+          setJoined(res.data[0]?.joined || false);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch communities:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCommunities();
+  }, []);
+
+  const safeCommunities = loading ? [] : communitiesData;
+  const activeCommunity = safeCommunities[0] || { name: '', subject: '', joined: false, activeVoiceRooms: 0 };
 
   const tabs = [
     { id: 'posts', label: 'Feed & Announcements' },

@@ -22,7 +22,7 @@ import {
 import { AppLayout } from '../../components/layout/AppLayout';
 import { Card, Badge, Avatar } from '../../components/ui/index.jsx';
 import { Button } from '../../components/ui/Button';
-import { MOCK_HANDMADE_NOTES } from '../../data/mockData';
+
 import { useAuth } from '../../context/AuthContext';
 import { UploadNotebookModal } from '../../components/explore/UploadNotebookModal';
 import { apiGet } from '../../config/api';
@@ -37,7 +37,7 @@ export default function ExplorePage() {
   const [activePageIndex, setActivePageIndex] = useState(0);
   const [activeView, setActiveView] = useState('all'); // 'all' | 'saved' | 'liked'
   const [isNotebookModalOpen, setIsNotebookModalOpen] = useState(false);
-  const [exploreNotesList, setExploreNotesList] = useState(MOCK_HANDMADE_NOTES);
+  const [exploreNotesList, setExploreNotesList] = useState([]);
 
   // Fetch persisted Explore notes from MongoDB backend
   useEffect(() => {
@@ -56,17 +56,16 @@ export default function ExplorePage() {
             previewImages: n.previewImages && n.previewImages.length > 0 ? n.previewImages : [n.coverImage || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80'],
             pdfUrl: n.pdfUrl || n.coverImage,
             tags: n.tags || ['handwritten', 'notes'],
-            author: n.author || {
-              name: n.creatorId?.name || 'Scholar Contributor',
-              avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-              university: 'Stanford University',
-            },
-            likesCount: n.likesCount || 5,
-            savesCount: n.savesCount || 2,
+            author: n.authorId?.name ? { name: n.authorId.name, avatar: n.authorId.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80', university: n.authorId.institution || 'Stanford University' } : { name: 'Scholar Contributor', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80', university: 'Stanford University' },
+            likesCount: n.likesCount || 0,
+            savesCount: n.savesCount || 0,
             pagesCount: n.pagesCount || (n.previewImages?.length || 10),
             rating: n.rating || 4.9,
           }));
-          setExploreNotesList([...formattedBackendNotes, ...MOCK_HANDMADE_NOTES]);
+          setExploreNotesList(formattedBackendNotes);
+          console.log('Backend notes loaded:', formattedBackendNotes.length);
+        } else {
+          setExploreNotesList([]);
         }
       } catch (err) {
         console.warn('Backend Explore notes fetch skipped/offline:', err.message);
@@ -164,7 +163,7 @@ export default function ExplorePage() {
     if (activeView === 'liked' && !likedNotes[note.id]) return false;
 
     const matchesCategory = selectedCategory === 'All' || note.subject === selectedCategory;
-    const matchesFormat = selectedFormat === 'All' || note.formatKey === selectedFormat || note.type === selectedFormat || note.format === selectedFormat;
+    const matchesFormat = selectedFormat === 'All' || note.format === selectedFormat || note.type === selectedFormat || note.format === selectedFormat;
     const matchesSearch = 
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       note.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
