@@ -12,7 +12,7 @@ import { useToast } from '../../context/ToastContext';
 import { Avatar, Badge } from '../ui/index.jsx';
 
 // Helper to get sidebar navigation links based on user role
-const getSidebarNav = (role) => {
+const getSidebarNav = (role, unreadMessagesCount = 0) => {
   if (role === 'admin') {
     return [
       { to: '/admin/dashboard', label: 'Admin Control', icon: Shield },
@@ -30,7 +30,7 @@ const getSidebarNav = (role) => {
       { to: '/courses', label: 'My Courses', icon: BookOpen },
       { to: '/explore', label: 'Lecture Notes Vault', icon: Compass },
       { to: '/communities', label: 'My Communities', icon: Users },
-      { to: '/messages', label: 'Student Messages', icon: MessageSquare, badgeCount: 3 },
+      { to: '/messages', label: 'Student Messages', icon: MessageSquare, badgeCount: unreadMessagesCount > 0 ? unreadMessagesCount : 0 },
       { to: '/tutor/analytics', label: 'Revenue & Analytics', icon: BarChart3 },
     ];
   }
@@ -43,7 +43,7 @@ const getSidebarNav = (role) => {
     { to: '/courses', label: 'Courses', icon: BookOpen },
     { to: '/communities', label: 'Communities', icon: Users },
     { to: '/ai-tutor', label: 'AI Tutor', icon: Bot, isAi: true },
-    { to: '/messages', label: 'Messages', icon: MessageSquare, badgeCount: 3 },
+    { to: '/messages', label: 'Messages', icon: MessageSquare, badgeCount: unreadMessagesCount > 0 ? unreadMessagesCount : 0 },
     { to: '/leaderboard', label: 'Leaderboard', icon: Trophy },
     { to: '/upload/image', label: 'Upload Note', icon: PlusCircle },
   ];
@@ -57,11 +57,11 @@ const sidebarBottom = [
 // ─── SIDEBAR ─────────────────────────────────────────────────────────────────
 export const Sidebar = ({ mobile = false, onClose }) => {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, unreadMessagesCount } = useAuth();
   const navigate = useNavigate();
 
   const isTutorUser = user?.role === 'tutor' || user?.role === 'faculty';
-  const navItems = getSidebarNav(user?.role);
+  const navItems = getSidebarNav(user?.role, unreadMessagesCount);
 
   const NavItem = ({ to, label, icon: Icon, badge, badgeCount, isAi }) => {
     const isActive = location.pathname === to || (to !== '/' && location.pathname.startsWith(to));
@@ -117,12 +117,12 @@ export const Sidebar = ({ mobile = false, onClose }) => {
                 <Flame className="w-4 h-4" strokeWidth={2} />
               </div>
               <div>
-                <div className="text-xs font-bold text-[#1E293B]">{user?.streak || 1} Day Streak</div>
-                <div className="text-[10px] text-[#94A3B8]">Keep it up!</div>
+                <div className="text-xs font-bold text-[#1E293B]">{user?.streak || 0} Day Streak</div>
+                <div className="text-[10px] text-[#94A3B8]">{(user?.streak || 0) > 0 ? 'Keep it up!' : 'Start your streak'}</div>
               </div>
             </div>
             <div className="flex items-center gap-1 text-xs font-bold text-[#4F7DF6] bg-[#EEF4FF] px-2 py-0.5 rounded-full">
-              <Zap className="w-3 h-3" strokeWidth={2} /> {user?.xp || 0}
+              <Zap className="w-3 h-3" strokeWidth={2} /> {(user?.xp || 0).toLocaleString()}
             </div>
           </>
         )}

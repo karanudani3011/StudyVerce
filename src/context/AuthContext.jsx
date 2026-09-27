@@ -14,8 +14,22 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notificationsCount, setNotificationsCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('login');
+
+  const fetchUnreadCounts = useCallback(async () => {
+    const token = localStorage.getItem('sv_token');
+    if (!token) return;
+    try {
+      const res = await apiGet('/messages/unread-count');
+      if (res && res.success && typeof res.count === 'number') {
+        setUnreadMessagesCount(res.count);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   // ─── Load user from stored JWT or localStorage on app boot ──────────────────
   useEffect(() => {
@@ -44,6 +58,7 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('sv_user', JSON.stringify(data.user));
             setIsAuthenticated(true);
           }
+          fetchUnreadCounts();
         } catch (error) {
           console.warn('Backend session validation warning:', error.message);
           if (cachedUser) {
@@ -60,7 +75,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     loadUser();
-  }, []);
+  }, [fetchUnreadCounts]);
 
   // Helper to persist user to state and localStorage
   const saveUserSession = (userData, token) => {
@@ -271,6 +286,8 @@ throw err;
       user, setUser,
       isAuthenticated, login, register, registerTutor, verifyRegistrationOtp, resendRegistrationOtp, loginTutor, loginAdmin, logout, loginWithProvider,
       notificationsCount, setNotificationsCount,
+      unreadMessagesCount, setUnreadMessagesCount,
+      fetchUnreadCounts,
       searchQuery, setSearchQuery,
       addXP,
       updateUser,

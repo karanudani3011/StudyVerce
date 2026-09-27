@@ -20,6 +20,7 @@ import {
 import { apiGet, apiDelete } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 import { CourseUploadModal } from '../../components/courses/CourseUploadModal';
+import { LiveMeetingsSection } from '../../components/meetings/LiveMeetingsSection';
 
 
 export default function AdminDashboard() {
@@ -299,6 +300,15 @@ export default function AdminDashboard() {
               Open Faculty Directory <ArrowRight className="w-4 h-4" />
             </button>
           </div>
+        </div>
+
+        {/* Live Meetings & Briefings Control */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-white border border-[#E2E8F0] shadow-xl">
+          <LiveMeetingsSection
+            title="Platform Live Meetings & Faculty Syncs"
+            subtitle="Schedule platform-wide faculty syncs, administrative briefings, and manage meetings"
+            showCreateButton={true}
+          />
         </div>
 
         {/* Suggestions & Action Plan */}

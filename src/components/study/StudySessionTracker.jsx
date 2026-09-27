@@ -16,7 +16,7 @@ import { useStudySession } from '../../hooks/useStudySession';
 import { useAuth } from '../../context/AuthContext';
 import { apiGet } from '../../config/api';
 
-export default function StudySessionTracker() {
+export default function StudySessionTracker({ onSessionCompleted }) {
   const { user } = useAuth();
   const { activeSession, stats, elapsedTime, startSession, stopSession, fetchStats } = useStudySession();
   const [selectedCourseId, setSelectedCourseId] = useState(null);
@@ -68,6 +68,9 @@ export default function StudySessionTracker() {
     if (!activeSession) return;
     try {
       await stopSession(activeSession._id, pause);
+      if (onSessionCompleted) {
+        onSessionCompleted();
+      }
     } catch (err) {
       console.error('Stop session error:', err.message);
     }

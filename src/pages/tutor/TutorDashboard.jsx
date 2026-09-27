@@ -13,6 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 import { CourseUploadModal } from '../../components/courses/CourseUploadModal';
 import { UploadNotebookModal } from '../../components/explore/UploadNotebookModal';
 import ReportContentModal from '../../components/modals/ReportContentModal';
+import { LiveMeetingsSection } from '../../components/meetings/LiveMeetingsSection';
 import { apiGet, apiDelete } from '../../config/api';
 import confetti from 'canvas-confetti';
 
@@ -365,6 +366,15 @@ export default function TutorDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Live Meetings & Classes Section for Faculty */}
+            <div className="pt-2">
+              <LiveMeetingsSection
+                title="Live Classes & Administrative Briefings"
+                subtitle="Manage scheduled video sessions with your students or join admin briefings"
+                showCreateButton={true}
+              />
+            </div>
           </div>
         )}
 
@@ -547,45 +557,12 @@ export default function TutorDashboard() {
 
         {/* ─── TAB 5: LIVE OFFICE HOURS ────────────────────────────────────── */}
         {activeTab === 'live' && (
-          <div className="space-y-6 max-w-4xl mx-auto">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-extrabold text-[#1E293B]">Live Office Hours & Webinars</h2>
-                <p className="text-xs text-[#64748B]">Schedule interactive live video sessions for your students</p>
-              </div>
-              <button
-                onClick={() => alert('Scheduled new Live Session!')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold cursor-pointer"
-              >
-                <Video className="w-4 h-4" /> Schedule Session
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {liveSessions.map(session => (
-                <div key={session.id} className="p-5 bg-white rounded-[22px] border border-[#E2E8F0] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[10px] font-black uppercase">
-                        🔴 Upcoming Live
-                      </span>
-                      <h3 className="text-sm font-extrabold text-[#1E293B]">{session.title}</h3>
-                    </div>
-                    <p className="text-xs text-[#64748B] font-semibold">{session.date} · {session.duration}</p>
-                    <p className="text-[11px] text-emerald-600 font-bold">{session.enrolled} Students Enrolled</p>
-                  </div>
-
-                  <a
-                    href={session.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 text-white text-xs font-extrabold flex items-center gap-2 shadow-md shadow-emerald-500/20 cursor-pointer"
-                  >
-                    <Video className="w-4 h-4" /> Join Room ↗
-                  </a>
-                </div>
-              ))}
-            </div>
+          <div className="space-y-6 max-w-5xl mx-auto">
+            <LiveMeetingsSection
+              title="Live Office Hours & Interactive Webinars"
+              subtitle="Schedule and conduct real-time video sessions for your students, or participate in admin briefings"
+              showCreateButton={true}
+            />
           </div>
         )}
 

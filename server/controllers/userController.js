@@ -1,5 +1,8 @@
 import User from '../models/User.js';
 import Tutor from '../models/Tutor.js';
+import Course from '../models/Course.js';
+import Note from '../models/Note.js';
+import Message from '../models/Message.js';
 import { cloudinary } from '../config/cloudinary.js';
 import QuizAttempt from '../models/QuizAttempt.js';
 import StudySession from '../models/StudySession.js';
@@ -9,7 +12,11 @@ import StudySession from '../models/StudySession.js';
 // @access  Private
 export const getDashboardStats = async (req, res) => {
   try {
-    let user = await User.findById(req.user._id);
+    let user = await User.findById(req.user._id).populate({
+      path: 'enrolledCourses',
+      select: 'title instructor instructorAvatar image tags duration lessons students rating progress level price subject category subcategory description lectures createdAt'
+    });
+
     if (!user) {
       user = await Tutor.findById(req.user._id);
     }
@@ -60,12 +67,13 @@ export const getDashboardStats = async (req, res) => {
     });
     const totalMinutes = allSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
 
-    const currentGoal = user.currentGoalMinutes || 0;
     const dailyGoal = user.dailyGoalMinutes || 60;
-    const completionPercentage = Math.min(Math.round((currentGoal / dailyGoal) * 100), 100);
+    const currentGoal = todayMinutes; // Real minutes studied today
+    const completionPercentage = Math.min(100, Math.round((currentGoal / dailyGoal) * 100));
 
-    // Format study time
+    // Format study time accurately
     const formatTime = (minutes) => {
+      if (!minutes || minutes <= 0) return '0 min';
       if (minutes < 60) return `${minutes} min`;
       const hours = Math.floor(minutes / 60);
       const mins = minutes % 60;
@@ -76,6 +84,12 @@ export const getDashboardStats = async (req, res) => {
     const todayQuizAttempts = await QuizAttempt.countDocuments({
       userId: user._id,
       completedAt: { $gte: today },
+    });
+
+    // Unread messages count
+    const unreadMessagesCount = await Message.countDocuments({
+      receiverId: user._id,
+      isRead: false,
     });
 
     // Dynamic daily tasks
@@ -106,9 +120,108 @@ export const getDashboardStats = async (req, res) => {
         text: 'Maintain active daily learning streak',
         subject: 'Consistency',
         xp: 15,
-        completed: (user.streak || 0) > 0,
+        completed: todayMinutes > 0,
       },
     ];
+
+    // Enrolled courses list
+    const enrolledCourses = (user.enrolledCourses || []).map(course => ({
+      id: course._id,
+      _id: course._id,
+      title: course.title,
+      instructor: course.instructor || 'Faculty Educator',
+      instructorAvatar: course.instructorAvatar || '',
+      image: course.image || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=600&q=80',
+      tags: course.tags || [],
+      duration: course.duration || 'Flexible',
+      lessons: course.lectures?.length || course.lessons || 0,
+      progress: course.progress || 0,
+      level: course.level || 'Beginner',
+      price: course.price || 'Free',
+      subject: course.subject || 'General',
+      category: course.category || '',
+      subcategory: course.subcategory || '',
+      description: course.description || '',
+      lectures: course.lectures || [],
+      enrolledAt: course.createdAt || user.updatedAt,
+    }));
+
+    // Real student recent activities aggregation
+    const activities = [];
+
+    // 1. Completed Study Sessions
+    const recentSessions = await StudySession.find({
+      userId: user._id,
+      status: 'completed',
+    }).sort({ startedAt: -1 }).limit(5);
+
+    recentSessions.forEach(s => {
+      activities.push({
+        id: `study-${s._id}`,
+        type: 'study_session',
+        title: 'Study Session Completed',
+        description: `Studied for ${s.durationMinutes || 0} minutes`,
+        date: s.endedAt || s.startedAt,
+        xp: s.xpEarned || 0,
+        icon: 'Clock',
+      });
+    });
+
+    // 2. Recent Quiz Attempts
+    const recentQuizzes = await QuizAttempt.find({
+      userId: user._id,
+    }).populate('quizId', 'title subject').sort({ completedAt: -1 }).limit(5);
+
+    recentQuizzes.forEach(q => {
+      activities.push({
+        id: `quiz-${q._id}`,
+        type: 'quiz',
+        title: q.passed ? 'Quiz Challenge Passed' : 'Quiz Challenge Attempted',
+        description: `Scored ${q.percentage}% in ${q.quizId?.title || 'Daily Quiz'} (${q.correctAnswers}/${q.totalQuestions})`,
+        date: q.completedAt,
+        xp: q.xpEarned || 0,
+        icon: 'Trophy',
+      });
+    });
+
+    // 3. Recent Uploaded Notes
+    const recentNotes = await Note.find({
+      $or: [
+        { creatorId: user._id.toString() },
+        { 'author.name': user.name }
+      ]
+    }).sort({ createdAt: -1 }).limit(5);
+
+    recentNotes.forEach(n => {
+      activities.push({
+        id: `note-${n._id}`,
+        type: 'note',
+        title: 'Lecture Note Uploaded',
+        description: `Uploaded "${n.title}" (${n.subject || 'General Study'})`,
+        date: n.createdAt,
+        xp: 25,
+        icon: 'FileText',
+      });
+    });
+
+    // 4. Course Enrollments
+    if (user.enrolledCourses && user.enrolledCourses.length > 0) {
+      user.enrolledCourses.forEach(c => {
+        activities.push({
+          id: `enroll-${c._id}`,
+          type: 'enrollment',
+          title: 'Course Enrolled',
+          description: `Enrolled in "${c.title}"`,
+          date: c.createdAt || user.updatedAt,
+          xp: 0,
+          icon: 'BookOpen',
+        });
+      });
+    }
+
+    // Sort all activities by date descending
+    activities.sort((a, b) => new Date(b.date) - new Date(a.date));
+    const recentActivity = activities.slice(0, 6);
 
     return res.json({
       success: true,
@@ -125,13 +238,18 @@ export const getDashboardStats = async (req, res) => {
         studyTotalMinutes: totalMinutes,
         dailyGoalMinutes: dailyGoal,
         currentGoalMinutes: currentGoal,
+        dailyGoalPercentage: completionPercentage,
         completionPercentage,
         quizzesCompleted: quizStats[0]?.totalAttempts || 0,
         quizzesPassed: quizStats[0]?.quizzesPassed || 0,
         avgQuizScore: quizStats[0]?.avgPercentage ? Math.round(quizStats[0].avgPercentage) : 0,
         totalQuestionsAnswered: quizStats[0]?.totalQuestions || 0,
         correctAnswers: quizStats[0]?.totalCorrect || 0,
+        unreadMessagesCount,
+        unreadNotificationsCount: 0,
       },
+      enrolledCourses,
+      recentActivity,
       dailyTasks,
       user: {
         id: user._id,
@@ -141,9 +259,13 @@ export const getDashboardStats = async (req, res) => {
         bio: user.bio,
         institution: user.institution,
         username: user.username,
+        role: user.role,
+        streak: user.streak || 0,
+        xp: user.xp || 0,
       },
     });
   } catch (error) {
+    console.error('getDashboardStats Error:', error);
     return res.status(500).json({ message: error.message || 'Server error fetching dashboard stats.' });
   }
 };
@@ -201,7 +323,7 @@ export const getDailyTasks = async (req, res) => {
         text: 'Maintain active daily learning streak',
         subject: 'Consistency',
         xp: 15,
-        completed: (user.streak || 0) > 0,
+        completed: todayMinutes > 0,
       },
     ];
 

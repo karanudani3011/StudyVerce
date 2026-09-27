@@ -49,6 +49,12 @@ export const apiPut = (endpoint, body) =>
     body: JSON.stringify(body),
   });
 
+export const apiPatch = (endpoint, body) =>
+  api(endpoint, {
+    method: 'PATCH',
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
 export const apiUpload = (endpoint, formData) =>
   api(endpoint, {
     method: 'POST',

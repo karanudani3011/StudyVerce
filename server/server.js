@@ -20,6 +20,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import postRoutes from './routes/postRoutes.js';
 import leaderboardRoutes from './routes/leaderboardRoutes.js';
 import searchRoutes from './routes/searchRoutes.js';
+import meetingRoutes from './routes/meetingRoutes.js';
 import { seedDefaultAdmin } from './controllers/adminController.js';
 import { seedDefaultQuizzes } from './config/seedQuizzes.js';
 import { getDailyTasks } from './controllers/userController.js';
@@ -62,6 +63,7 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/meetings', meetingRoutes);
 app.get('/api/study-tasks', protect, getDailyTasks);
 
 // ─── Health Check ───────────────────────────────────────────────────────────

@@ -24,7 +24,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../ui/Avatar';
 
-const getMenuItems = (role) => {
+const getMenuItems = (role, unreadMessagesCount = 0) => {
   if (role === 'admin') {
     return [
       { id: 'admin-dashboard', label: 'Admin Control', icon: Shield, isAdmin: true },
@@ -43,7 +43,7 @@ const getMenuItems = (role) => {
       { id: 'courses', label: 'My Courses', icon: BookOpen },
       { id: 'explore', label: 'Lecture Notes Vault', icon: Compass },
       { id: 'community', label: 'My Communities', icon: Users },
-      { id: 'messages', label: 'Student Messages', icon: MessageSquare, badge: '3' },
+      { id: 'messages', label: 'Student Messages', icon: MessageSquare, badge: unreadMessagesCount > 0 ? String(unreadMessagesCount) : null },
       { id: 'tutor-analytics', label: 'Revenue & Analytics', icon: BarChart3, isTutor: true },
       { id: 'settings', label: 'Settings', icon: Settings },
     ];
@@ -57,7 +57,7 @@ const getMenuItems = (role) => {
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'community', label: 'Communities', icon: Users },
     { id: 'ai-tutor', label: 'AI Tutor', icon: Bot, isAi: true },
-    { id: 'messages', label: 'Messages', icon: MessageSquare, badge: '3' },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, badge: unreadMessagesCount > 0 ? String(unreadMessagesCount) : null },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
     { id: 'upload', label: 'Upload Note', icon: PlusCircle },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -65,9 +65,9 @@ const getMenuItems = (role) => {
 };
 
 export const Sidebar = () => {
-  const { activeTab, setActiveTab, user, logout } = useAuth();
+  const { activeTab, setActiveTab, user, logout, unreadMessagesCount } = useAuth();
 
-  const menuItems = getMenuItems(user?.role);
+  const menuItems = getMenuItems(user?.role, unreadMessagesCount);
   const isTutorUser = user?.role === 'tutor' || user?.role === 'faculty';
 
   return (

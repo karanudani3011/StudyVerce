@@ -280,3 +280,21 @@ export const sendMessage = async (req, res) => {
     return res.status(500).json({ message: error.message || 'Server error sending message.' });
   }
 };
+
+// @desc    Get total unread messages count for logged-in user
+// @route   GET /api/messages/unread-count
+// @access  Private
+export const getUnreadMessageCount = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const count = await Message.countDocuments({
+      receiverId: userId,
+      isRead: false,
+    });
+    return res.json({ success: true, count });
+  } catch (error) {
+    console.error('Get Unread Message Count Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Server error' });
+  }
+};
+
