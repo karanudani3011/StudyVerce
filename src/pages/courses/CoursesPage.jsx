@@ -151,6 +151,8 @@ export default function CoursesPage() {
             description: c.description,
             lectures: c.lectures,
             tutorId: c.tutorId || c.instructorId,
+            hasQuiz: c.hasQuiz || false,
+            quizId: c.quizId || null,
           }));
           setCoursesList(formatted);
         }
@@ -255,6 +257,8 @@ export default function CoursesPage() {
       description: newCourse.description,
       lectures: newCourse.lectures || [],
       tutorId: user?._id || user?.id,
+      hasQuiz: newCourse.hasQuiz || false,
+      quizId: newCourse.quizId || null,
     };
 
     setCoursesList(prev => [formattedNewCourse, ...prev]);
@@ -678,7 +682,14 @@ export default function CoursesPage() {
                   
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Badge variant="primary" size="sm">{course.subject}</Badge>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge variant="primary" size="sm">{course.subject}</Badge>
+                        {course.hasQuiz && (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-50 text-purple-700 border border-purple-200">
+                            <Award className="w-2.5 h-2.5" /> Quiz & Cert
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs font-bold text-[#F59E0B] flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-current" /> {course.rating}</span>
                     </div>
                     <h3 className="text-base font-bold text-[#1E293B] line-clamp-2">{course.title}</h3>

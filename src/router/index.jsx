@@ -27,6 +27,8 @@ const AITutorPage       = lazy(() => import('../pages/ai-tutor/AITutorPage'));
 const CoursesPage       = lazy(() => import('../pages/courses/CoursesPage'));
 const CourseDetails     = lazy(() => import('../pages/courses/CourseDetails'));
 const MyLearningPage    = lazy(() => import('../pages/courses/MyLearningPage'));
+const CourseLearningPage = lazy(() => import('../pages/courses/CourseLearningPage'));
+
 const UploadImage       = lazy(() => import('../pages/upload/UploadImage'));
 const UploadReel        = lazy(() => import('../pages/upload/UploadReel'));
 const UploadPDF         = lazy(() => import('../pages/upload/UploadPDF'));
@@ -193,6 +195,7 @@ export const AppRouter = () => (
                   <Route path="/ai-tutor"          element={<AITutorPage />} />
                   <Route path="/courses"           element={<CoursesPage />} />
                   <Route path="/courses/:id"       element={<CourseDetails />} />
+                  <Route path="/courses/:id/learn" element={<CourseLearningPage />} />
                   <Route path="/my-learning"       element={<MyLearningPage />} />
                   <Route path="/upload/image"      element={<UploadImage />} />
                   <Route path="/upload/reel"       element={<UploadReel />} />

@@ -93,6 +93,16 @@ const courseSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Final Quiz (optional)
+    hasQuiz: {
+      type: Boolean,
+      default: false,
+    },
+    quizId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Quiz',
+      default: null,
+    },
   },
   {
     timestamps: true,

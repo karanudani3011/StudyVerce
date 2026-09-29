@@ -95,6 +95,11 @@ const quizSchema = new mongoose.Schema(
       ref: 'Tutor',
       default: null,
     },
+    // Whether this quiz is a course final quiz (vs. standalone topic quiz)
+    isFinalQuiz: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
